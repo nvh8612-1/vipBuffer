@@ -27,7 +27,7 @@ local Window = WindUI:CreateWindow({
     SideBarWidth = 200
 })
 
--- Nút bấm mở lại Menu khi thu gọn trên Điện Thoại
+-- Nút bấm mở lại Hub khi thu gọn trên Mobile
 Window:EditOpenButton({
     Title = "Open Hub",
     Icon = "menu",
@@ -37,15 +37,13 @@ Window:EditOpenButton({
 })
 
 --------------------------------------------------
--- TABS (SỬA LỖI TAB BẰNG BẢNG TABS)
+-- TABS
 --------------------------------------------------
 
-local Tabs = {
-    Main = Window:Tab({
-        Title = "Main Features",
-        Icon = "home"
-    })
-}
+local MainTab = Window:Tab({
+    Title = "Main Features",
+    Icon = "home"
+})
 
 --------------------------------------------------
 -- JOYSTICK ẢO TRÊN MÀN HÌNH (CHO ANTI-AFK)
@@ -95,7 +93,7 @@ local antiAFKActive = false
 local skipPromptActive = false
 
 -- 1. Anti-AFK Toggle
-Tabs.Main:Toggle({
+MainTab:Toggle({
     Title = "Anti-AFK (JoyStick)",
     Desc = "Tự động trượt nhẹ lên phía trước để tránh bị Kick AFK",
     Value = false,
@@ -117,7 +115,7 @@ Tabs.Main:Toggle({
 })
 
 -- 2. Skip Prompt Toggle
-Tabs.Main:Toggle({
+MainTab:Toggle({
     Title = "Skip Prompt",
     Desc = "Xóa thời gian giữ phím tương tác (ProximityPrompt)",
     Value = false,

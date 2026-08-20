@@ -1,4 +1,4 @@
--- LocalScript Menu AFK chữ P (Fix 100% lỗi bấm nút)
+-- LocalScript Menu AFK chữ P (Fix triệt để lỗi bấm cảm ứng trên Delta Mobile)
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
@@ -16,7 +16,7 @@ end
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "DeltaAFKMenu"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.DisplayOrder = 99999
+ScreenGui.DisplayOrder = 999999
 ScreenGui.Parent = parentGui
 
 -- Frame Menu Chính
@@ -25,7 +25,7 @@ MainFrame.Size = UDim2.new(0, 200, 0, 110)
 MainFrame.Position = UDim2.new(0.5, 130, 0.35, -55)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
-MainFrame.Active = false -- Tắt Active của Frame để không chặn bấm nút con
+MainFrame.Active = true
 MainFrame.ZIndex = 100
 MainFrame.Parent = ScreenGui
 
@@ -103,54 +103,32 @@ StickCorner.CornerRadius = UDim2.new(1, 0)
 StickCorner.Parent = Stick
 
 -- ==========================================
--- 2. HỆ THỐNG KÉO THẢ (DRAG) CHUẨN KHÔNG LỖI
+-- 2. BẮT SỰ KIỆN CHẠM TRỰC TIẾP (BYPASS TOUCH ISSUE)
 -- ==========================================
-local function enableDrag(frame, dragHandle)
-	local dragging, dragInput, dragStart, startPos
-	dragHandle.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragging = true
-			dragStart = input.Position
-			startPos = frame.Position
-			input.Changed:Connect(function()
-				if input.UserInputState == Enum.UserInputState.End then
-					dragging = false
-				end
-			end)
-		end
-	end)
-	dragHandle.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-			dragInput = input
-		end
-	end)
-	UserInputService.InputChanged:Connect(function(input)
-		if input == dragInput and dragging then
-			local delta = input.Position - dragStart
-			frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+local function bindTouch(btn, callback)
+	btn.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+			callback()
 		end
 	end)
 end
 
-enableDrag(MainFrame, Title)
-enableDrag(SmallBtn, SmallBtn)
-
--- ==========================================
--- 3. XỬ LÝ NÚT BẤM (BẬT/TẮT & THU GỌN)
--- ==========================================
-local function onMinimize()
+-- Thu gọn menu
+bindTouch(MinimizeBtn, function()
 	SmallBtn.Position = MainFrame.Position
 	MainFrame.Visible = false
 	SmallBtn.Visible = true
-end
+end)
 
-local function onExpand()
+-- Mở rộng menu
+bindTouch(SmallBtn, function()
 	MainFrame.Position = SmallBtn.Position
 	SmallBtn.Visible = false
 	MainFrame.Visible = true
-end
+end)
 
-local function onToggleAFK()
+-- Bật/Tắt Anti-AFK
+bindTouch(AFKToggle, function()
 	antiAFKActive = not antiAFKActive
 	if antiAFKActive then
 		AFKToggle.Text = "Anti-AFK: ON"
@@ -160,23 +138,44 @@ local function onToggleAFK()
 		AFKToggle.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
 		Stick.Position = UDim2.new(0.5, -15, 0.5, -15)
 	end
+end)
+
+-- ==========================================
+-- 3. KÉO THẢ MENU BẰNG CẢM ỨNG
+-- ==========================================
+local function enableDrag(frame, dragHandle)
+	local dragging, dragStart, startPos
+	dragHandle.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = frame.Position
+		end
+	end)
+	
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			local delta = input.Position - dragStart
+			frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		end
+	end)
+	
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
 end
 
-MinimizeBtn.MouseButton1Click:Connect(onMinimize)
-MinimizeBtn.Activated:Connect(onMinimize)
-
-SmallBtn.MouseButton1Click:Connect(onExpand)
-SmallBtn.Activated:Connect(onExpand)
-
-AFKToggle.MouseButton1Click:Connect(onToggleAFK)
-AFKToggle.Activated:Connect(onToggleAFK)
+enableDrag(MainFrame, Title)
+enableDrag(SmallBtn, SmallBtn)
 
 -- ==========================================
 -- 4. LOGIC ANTI-AFK TIẾN TỚI
 -- ==========================================
 task.spawn(function()
 	while true do
-		task.wait(20)
+		task.wait(40)
 		if antiAFKActive then
 			pcall(function()
 				local character = LocalPlayer.Character

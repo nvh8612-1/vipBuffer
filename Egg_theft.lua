@@ -1,12 +1,13 @@
 -- LocalScript tối ưu hoàn chỉnh cho Delta Executor
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
-local VirtualUser = game:GetService("VirtualUser")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
 -- Biến lưu trạng thái
+local speedPercentage = 0
+local speedActive = false
 local skipPromptActive = false
-local antiAFKActive = false
 
 -- Lấy Parent GUI chuẩn của Delta để Menu chắc chắn hiển thị
 local parentGui = (gethui and gethui()) or game:GetService("CoreGui") or LocalPlayer:WaitForChild("PlayerGui")
@@ -26,8 +27,8 @@ ScreenGui.Parent = parentGui
 
 -- Khung Menu Chính
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 240, 0, 140)
-MainFrame.Position = UDim2.new(0.5, -120, 0.35, -70)
+MainFrame.Size = UDim2.new(0, 240, 0, 180)
+MainFrame.Position = UDim2.new(0.5, -120, 0.35, -90)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -56,25 +57,36 @@ MinimizeBtn.TextSize = 18
 MinimizeBtn.Font = Enum.Font.SourceSansBold
 MinimizeBtn.Parent = MainFrame
 
--- Nút Bật/Tắt Skip Prompt (Giữ nguyên 100% gốc)
+-- Ô Nhập % Tốc Độ
+local PercentInput = Instance.new("TextBox")
+PercentInput.Size = UDim2.new(0.9, 0, 0, 30)
+PercentInput.Position = UDim2.new(0.05, 0, 0.25, 0)
+PercentInput.PlaceholderText = "Nhập % tăng tốc (ví dụ: 10)"
+PercentInput.Text = ""
+PercentInput.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+PercentInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+PercentInput.Font = Enum.Font.SourceSans
+PercentInput.Parent = MainFrame
+
+-- Nút Bật/Tắt Tốc Độ
+local SpeedToggle = Instance.new("TextButton")
+SpeedToggle.Size = UDim2.new(0.9, 0, 0, 32)
+SpeedToggle.Position = UDim2.new(0.05, 0, 0.46, 0)
+SpeedToggle.Text = "Speed: OFF"
+SpeedToggle.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+SpeedToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedToggle.Font = Enum.Font.SourceSansBold
+SpeedToggle.Parent = MainFrame
+
+-- Nút Bật/Tắt Skip Prompt
 local PromptToggle = Instance.new("TextButton")
-PromptToggle.Size = UDim2.new(0.9, 0, 0, 35)
-PromptToggle.Position = UDim2.new(0.05, 0, 0.3, 0)
+PromptToggle.Size = UDim2.new(0.9, 0, 0, 32)
+PromptToggle.Position = UDim2.new(0.05, 0, 0.68, 0)
 PromptToggle.Text = "Skip Prompt: OFF"
 PromptToggle.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
 PromptToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
 PromptToggle.Font = Enum.Font.SourceSansBold
 PromptToggle.Parent = MainFrame
-
--- Nút Bật/Tắt Anti-AFK Safe
-local AFKToggle = Instance.new("TextButton")
-AFKToggle.Size = UDim2.new(0.9, 0, 0, 35)
-AFKToggle.Position = UDim2.new(0.05, 0, 0.65, 0)
-AFKToggle.Text = "Anti-AFK: OFF"
-AFKToggle.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-AFKToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-AFKToggle.Font = Enum.Font.SourceSansBold
-AFKToggle.Parent = MainFrame
 
 -- Nút Chữ "S" Thu Gọn (Ban đầu ẩn)
 local SmallBtn = Instance.new("TextButton")
@@ -106,7 +118,40 @@ SmallBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- 3. LOGIC SKIP PROMPT (Y HỆT BẢN GỐC CỦA BẠN)
+-- 3. LOGIC TĂNG TỐC ĐỘ THEO % DỰA TRÊN TỐC ĐỘ SERVER
+-- ==========================================
+PercentInput.FocusLost:Connect(function()
+	local val = tonumber(PercentInput.Text)
+	if val then
+		speedPercentage = val
+	end
+end)
+
+SpeedToggle.MouseButton1Click:Connect(function()
+	speedActive = not speedActive
+	if speedActive then
+		SpeedToggle.Text = "Speed: ON"
+		SpeedToggle.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
+	else
+		SpeedToggle.Text = "Speed: OFF"
+		SpeedToggle.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+	end
+end)
+
+-- Tự động nhân % trên tốc độ hiện tại mà server cấp cho nhân vật
+RunService.Stepped:Connect(function()
+	if speedActive and speedPercentage > 0 then
+		local character = LocalPlayer.Character
+		if character and character:FindFirstChild("Humanoid") then
+			local humanoid = character.Humanoid
+			local currentBase = humanoid.WalkSpeed
+			humanoid.WalkSpeed = currentBase * (1 + (speedPercentage / 100))
+		end
+	end
+end)
+
+-- ==========================================
+-- 4. LOGIC SKIP PROMPT (BỎ QUA THỜI GIAN GIỮ)
 -- ==========================================
 PromptToggle.MouseButton1Click:Connect(function()
 	skipPromptActive = not skipPromptActive
@@ -130,28 +175,5 @@ end)
 workspace.DescendantAdded:Connect(function(descendant)
 	if skipPromptActive and descendant:IsA("ProximityPrompt") then
 		descendant.HoldDuration = 0
-	end
-end)
-
--- ==========================================
--- 4. LOGIC ANTI-AFK AN TOÀN (KHÔNG BỊ ANTI-CHEAT BẮT)
--- ==========================================
-AFKToggle.MouseButton1Click:Connect(function()
-	antiAFKActive = not antiAFKActive
-	if antiAFKActive then
-		AFKToggle.Text = "Anti-AFK: ON"
-		AFKToggle.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
-	else
-		AFKToggle.Text = "Anti-AFK: OFF"
-		AFKToggle.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-	end
-end)
-
-LocalPlayer.Idled:Connect(function()
-	if antiAFKActive then
-		pcall(function()
-			VirtualUser:CaptureController()
-			VirtualUser:ClickButton2(Vector2.new(0, 0))
-		end)
 	end
 end)

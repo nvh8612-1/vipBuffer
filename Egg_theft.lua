@@ -1,5 +1,4 @@
---// WINDUI FULL HUB (ANTI-AFK & SKIP PROMPT)
-
+--// WINDUI FULL HUB (FIXED TAB)
 local WindUI = loadstring(game:HttpGet(
     "https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"
 ))()
@@ -28,14 +27,25 @@ local Window = WindUI:CreateWindow({
     SideBarWidth = 200
 })
 
+-- Nút bấm mở lại Menu khi thu gọn trên Điện Thoại
+Window:EditOpenButton({
+    Title = "Open Hub",
+    Icon = "menu",
+    CornerRadius = UDim2.new(0, 8),
+    StrokeThickness = 2,
+    Draggable = true,
+})
+
 --------------------------------------------------
--- TABS
+-- TABS (SỬA LỖI TAB BẰNG BẢNG TABS)
 --------------------------------------------------
 
-local Main = Window:Tab({
-    Title = "Main Features",
-    Icon = "home"
-})
+local Tabs = {
+    Main = Window:Tab({
+        Title = "Main Features",
+        Icon = "home"
+    })
+}
 
 --------------------------------------------------
 -- JOYSTICK ẢO TRÊN MÀN HÌNH (CHO ANTI-AFK)
@@ -85,7 +95,7 @@ local antiAFKActive = false
 local skipPromptActive = false
 
 -- 1. Anti-AFK Toggle
-Main:Toggle({
+Tabs.Main:Toggle({
     Title = "Anti-AFK (JoyStick)",
     Desc = "Tự động trượt nhẹ lên phía trước để tránh bị Kick AFK",
     Value = false,
@@ -107,7 +117,7 @@ Main:Toggle({
 })
 
 -- 2. Skip Prompt Toggle
-Main:Toggle({
+Tabs.Main:Toggle({
     Title = "Skip Prompt",
     Desc = "Xóa thời gian giữ phím tương tác (ProximityPrompt)",
     Value = false,

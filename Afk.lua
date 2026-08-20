@@ -1,11 +1,12 @@
--- LocalScript Menu AFK Tự Kéo Di Chuyển (Nút "P" - Né Kick 100%)
+-- LocalScript Menu AFK Giả Lập Phím Delta Keyboard (Nút "P")
 local Players = game:GetService("Players")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
 -- Biến lưu trạng thái
 local antiAFKActive = false
 
--- Lấy Parent GUI chuẩn
+-- Lấy Parent GUI chuẩn của Delta
 local parentGui = (gethui and gethui()) or game:GetService("CoreGui") or LocalPlayer:WaitForChild("PlayerGui")
 
 -- Xóa Menu AFK cũ nếu đã chạy trước đó
@@ -24,7 +25,7 @@ ScreenGui.Parent = parentGui
 -- Khung Menu AFK
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 200, 0, 110)
-MainFrame.Position = UDim2.new(0.5, 130, 0.35, -55) -- Đặt lệch bên phải Menu cũ
+MainFrame.Position = UDim2.new(0.5, 130, 0.35, -55) -- Đặt lệch bên phải
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -93,7 +94,7 @@ SmallBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- 3. LOGIC ANTI-AFK TỰ KÉO JOYSTICK DI CHUYỂN
+-- 3. LOGIC ANTI-AFK GIẢ LẬP BẤM PHÍM DẠNG DELTA KEYBOARD
 -- ==========================================
 AFKToggle.MouseButton1Click:Connect(function()
 	antiAFKActive = not antiAFKActive
@@ -106,26 +107,23 @@ AFKToggle.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Vòng lặp tự động nhúc nhích nhân vật mỗi 60 giây
+-- Vòng lặp mô phỏng đè phím W rồi lùi lại bằng phím S mỗi 45 giây
 task.spawn(function()
 	while true do
-		task.wait(60)
+		task.wait(45)
 		if antiAFKActive then
 			pcall(function()
-				local character = LocalPlayer.Character
-				if character then
-					local humanoid = character:FindFirstChildOfClass("Humanoid")
-					if humanoid then
-						-- Kéo tiến 1 bước
-						humanoid:Move(Vector3.new(0, 0, -1), true)
-						task.wait(0.2)
-						-- Kéo lùi về chỗ cũ
-						humanoid:Move(Vector3.new(0, 0, 1), true)
-						task.wait(0.2)
-						-- Dừng lại
-						humanoid:Move(Vector3.new(0, 0, 0), true)
-					end
-				end
+				-- Bấm giữ phím W (Đi tới)
+				VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.W, false, game)
+				task.wait(0.3)
+				VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.W, false, game)
+				
+				task.wait(0.1)
+				
+				-- Bấm giữ phím S (Thùi lại)
+				VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.S, false, game)
+				task.wait(0.3)
+				VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.S, false, game)
 			end)
 		end
 	end

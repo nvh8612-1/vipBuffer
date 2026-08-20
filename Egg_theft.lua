@@ -1,4 +1,4 @@
---// RAYFIELD - SKIP PROMPT & ANTI-AFK
+--// RAYFIELD - BYPASS ANTI-AFK (CONTROL MODULE METHOD)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Players = game:GetService("Players")
@@ -37,11 +37,9 @@ MainTab:CreateToggle({
     CurrentValue = false,
     Flag = "SkipPrompt",
     Callback = function(Value)
-
         skipPromptActive = Value
 
         if Value then
-            -- Áp dụng cho các Prompt đang tồn tại
             for _, prompt in ipairs(Workspace:GetDescendants()) do
                 if prompt:IsA("ProximityPrompt") then
                     pcall(function()
@@ -55,7 +53,6 @@ MainTab:CreateToggle({
                 Content = "Skip Prompt: ON",
                 Duration = 2
             })
-
         else
             Rayfield:Notify({
                 Title = "Skip Prompt",
@@ -67,13 +64,13 @@ MainTab:CreateToggle({
 })
 
 --------------------------------------------------
--- ANTI AFK (JOYSTICK)
+-- ANTI AFK (CONTROL MODULE BYPASS)
 --------------------------------------------------
 
 local antiAFKActive = false
 
 MainTab:CreateToggle({
-    Name = "Anti-AFK (Virtual Joystick)",
+    Name = "Anti-AFK (Bypass Anti-Cheat)",
     CurrentValue = false,
     Flag = "AntiAFK",
     Callback = function(Value)
@@ -92,10 +89,7 @@ MainTab:CreateToggle({
 --------------------------------------------------
 
 Workspace.DescendantAdded:Connect(function(descendant)
-
-    if not skipPromptActive then
-        return
-    end
+    if not skipPromptActive then return end
 
     if descendant:IsA("ProximityPrompt") then
         pcall(function()
@@ -105,41 +99,25 @@ Workspace.DescendantAdded:Connect(function(descendant)
 end)
 
 --------------------------------------------------
--- VÒNG LẶP ANTI-AFK JOYSTICK
+-- VÒNG LẶP ANTI-AFK QUA CONTROL MODULE
 --------------------------------------------------
 
 task.spawn(function()
-    local VirtualInputManager = game:GetService("VirtualInputManager")
-
     while true do
-        task.wait(30) -- Thực hiện vuốt Joystick mỗi 30 giây
+        task.wait(30) -- Chạy mỗi 30 giây
         if antiAFKActive then
             pcall(function()
-                local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
-                local touchGui = playerGui and playerGui:FindFirstChild("TouchGui")
-                local touchFrame = touchGui and touchGui:FindFirstChild("TouchControlFrame")
-                local dynamicThumbstick = touchFrame and (touchFrame:FindFirstChild("DynamicThumbstickFrame") or touchFrame:FindFirstChild("ThumbstickFrame"))
+                -- Lấy Module điều khiển di chuyển gốc của Roblox
+                local PlayerScripts = LocalPlayer:WaitForChild("PlayerScripts")
+                local PlayerModule = require(PlayerScripts:WaitForChild("PlayerModule"))
+                local Controls = PlayerModule:GetControls()
 
-                if dynamicThumbstick and dynamicThumbstick.AbsoluteSize.X > 0 then
-                    -- Vuốt nút Joystick ảo trên Mobile/Cảm ứng về phía trước
-                    local center = dynamicThumbstick.AbsolutePosition + (dynamicThumbstick.AbsoluteSize / 2)
-                    local dragTarget = center - Vector2.new(0, 50) -- Kéo lên trên (tiến về trước)
-
-                    VirtualInputManager:SendTouchEvent(0, 0, center.X, center.Y)
-                    task.wait(0.05)
-                    VirtualInputManager:SendTouchEvent(0, 1, dragTarget.X, dragTarget.Y)
-                    task.wait(0.3)
-                    VirtualInputManager:SendTouchEvent(0, 2, dragTarget.X, dragTarget.Y)
-                else
-                    -- Dự phòng cho PC / Thiết bị không hiện Joystick
-                    local char = LocalPlayer.Character
-                    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-                    if humanoid then
-                        humanoid:Move(Vector3.new(0, 0, -1), true)
-                        task.wait(0.5)
-                        humanoid:Move(Vector3.new(0, 0, 0), true)
-                    end
-                end
+                -- Mô phỏng đẩy Joystick về phía trước (Hướng Vector: X=0, Y=1)
+                Controls:OnDirectionsChanged(Vector2.new(0, 1), false)
+                task.wait(0.3)
+                
+                -- Trả Joystick về vị trí trung tâm (Dừng di chuyển)
+                Controls:OnDirectionsChanged(Vector2.new(0, 0), false)
             end)
         end
     end

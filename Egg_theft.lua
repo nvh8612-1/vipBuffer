@@ -1,10 +1,13 @@
 -- LocalScript tối ưu hoàn chỉnh cho Delta Executor
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
+local RunService = game:GetService("RunService")
+local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
 -- Biến lưu trạng thái
+local speedPercentage = 0
+local speedActive = false
 local skipPromptActive = false
 local antiAFKActive = false
 
@@ -17,7 +20,7 @@ if parentGui:FindFirstChild("DeltaFullMenu") then
 end
 
 -- ==========================================
--- 1. TẠO GIAO DIỆN (GUI)
+-- 1. TẠO GIAO DIỆN CHÍNH (GUI)
 -- ==========================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "DeltaFullMenu"
@@ -26,12 +29,12 @@ ScreenGui.Parent = parentGui
 
 -- Khung Menu Chính
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 240, 0, 140)
-MainFrame.Position = UDim2.new(0.5, -120, 0.35, -70)
+MainFrame.Size = UDim2.new(0, 250, 0, 210)
+MainFrame.Position = UDim2.new(0.5, -125, 0.35, -105)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
-MainFrame.Draggable = true -- Cho phép kéo thả Menu
+MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 
 -- Tiêu đề Menu
@@ -56,27 +59,108 @@ MinimizeBtn.TextSize = 18
 MinimizeBtn.Font = Enum.Font.SourceSansBold
 MinimizeBtn.Parent = MainFrame
 
--- Nút Bật/Tắt Skip Prompt (Giữ nguyên gốc)
+-- Thanh Nút Chuyển Tab (Main | Speed)
+local TabBar = Instance.new("Frame")
+TabBar.Size = UDim2.new(1, 0, 0, 30)
+TabBar.Position = UDim2.new(0, 0, 0, 35)
+TabBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+TabBar.BorderSizePixel = 0
+TabBar.Parent = MainFrame
+
+local MainTabBtn = Instance.new("TextButton")
+MainTabBtn.Size = UDim2.new(0.5, 0, 1, 0)
+MainTabBtn.Position = UDim2.new(0, 0, 0, 0)
+MainTabBtn.Text = "Main"
+MainTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+MainTabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MainTabBtn.Font = Enum.Font.SourceSansBold
+MainTabBtn.Parent = TabBar
+
+local SpeedTabBtn = Instance.new("TextButton")
+SpeedTabBtn.Size = UDim2.new(0.5, 0, 1, 0)
+SpeedTabBtn.Position = UDim2.new(0.5, 0, 0, 0)
+SpeedTabBtn.Text = "Speed"
+SpeedTabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+SpeedTabBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+SpeedTabBtn.Font = Enum.Font.SourceSansBold
+SpeedTabBtn.Parent = TabBar
+
+-- Container Nội Dung Tab Main
+local MainContent = Instance.new("Frame")
+MainContent.Size = UDim2.new(1, 0, 1, -65)
+MainContent.Position = UDim2.new(0, 0, 0, 65)
+MainContent.BackgroundTransparency = 1
+MainContent.Visible = true
+MainContent.Parent = MainFrame
+
+-- Container Nội Dung Tab Speed
+local SpeedContent = Instance.new("Frame")
+SpeedContent.Size = UDim2.new(1, 0, 1, -65)
+SpeedContent.Position = UDim2.new(0, 0, 0, 65)
+SpeedContent.BackgroundTransparency = 1
+SpeedContent.Visible = false
+SpeedContent.Parent = MainFrame
+
+-- ==========================================
+-- 2. CÁC NÚT TRONG TAB MAIN
+-- ==========================================
+-- Nút Bật/Tắt Skip Prompt
 local PromptToggle = Instance.new("TextButton")
-PromptToggle.Size = UDim2.new(0.9, 0, 0, 32)
-PromptToggle.Position = UDim2.new(0.05, 0, 0.28, 0)
+PromptToggle.Size = UDim2.new(0.9, 0, 0, 35)
+PromptToggle.Position = UDim2.new(0.05, 0, 0.15, 0)
 PromptToggle.Text = "Skip Prompt: OFF"
 PromptToggle.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
 PromptToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
 PromptToggle.Font = Enum.Font.SourceSansBold
-PromptToggle.Parent = MainFrame
+PromptToggle.Parent = MainContent
 
--- Nút Bật/Tắt Anti-AFK Phím PC
+-- Nút Bật/Tắt Anti-AFK
 local AFKToggle = Instance.new("TextButton")
-AFKToggle.Size = UDim2.new(0.9, 0, 0, 32)
-AFKToggle.Position = UDim2.new(0.05, 0, 0.60, 0)
-AFKToggle.Text = "Anti-AFK (WASD): OFF"
+AFKToggle.Size = UDim2.new(0.9, 0, 0, 35)
+AFKToggle.Position = UDim2.new(0.05, 0, 0.55, 0)
+AFKToggle.Text = "Anti-AFK: OFF"
 AFKToggle.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
 AFKToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
 AFKToggle.Font = Enum.Font.SourceSansBold
-AFKToggle.Parent = MainFrame
+AFKToggle.Parent = MainContent
 
--- Nút Chữ "S" Thu Gọn (Ban đầu ẩn)
+-- ==========================================
+-- 3. CÁC THÀNH PHẦN TRONG TAB SPEED
+-- ==========================================
+-- Ô Nhập % Tốc Độ
+local PercentInput = Instance.new("TextBox")
+PercentInput.Size = UDim2.new(0.9, 0, 0, 30)
+PercentInput.Position = UDim2.new(0.05, 0, 0.08, 0)
+PercentInput.PlaceholderText = "Nhập % tăng tốc (ví dụ: 10)"
+PercentInput.Text = ""
+PercentInput.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+PercentInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+PercentInput.Font = Enum.Font.SourceSans
+PercentInput.Parent = SpeedContent
+
+-- Nút Bật/Tắt Tốc Độ
+local SpeedToggle = Instance.new("TextButton")
+SpeedToggle.Size = UDim2.new(0.9, 0, 0, 32)
+SpeedToggle.Position = UDim2.new(0.05, 0, 0.35, 0)
+SpeedToggle.Text = "Speed: OFF"
+SpeedToggle.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+SpeedToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedToggle.Font = Enum.Font.SourceSansBold
+SpeedToggle.Parent = SpeedContent
+
+-- Ô Thông Báo Cảnh Báo Nhiễu
+local SpeedNotice = Instance.new("TextLabel")
+SpeedNotice.Size = UDim2.new(0.9, 0, 0, 40)
+SpeedNotice.Position = UDim2.new(0.05, 0, 0.65, 0)
+SpeedNotice.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+SpeedNotice.Text = "Đây chỉ là gây nhiễu không cho server quét thôi không có tác dụng đâu bật cũng như không"
+SpeedNotice.TextColor3 = Color3.fromRGB(255, 180, 50)
+SpeedNotice.TextSize = 10
+SpeedNotice.TextWrapped = true
+SpeedNotice.Font = Enum.Font.SourceSans
+SpeedNotice.Parent = SpeedContent
+
+-- Nút Chữ "S" Thu Gọn
 local SmallBtn = Instance.new("TextButton")
 SmallBtn.Size = UDim2.new(0, 40, 0, 40)
 SmallBtn.Position = MainFrame.Position
@@ -91,8 +175,26 @@ SmallBtn.Draggable = true
 SmallBtn.Parent = ScreenGui
 
 -- ==========================================
--- 2. XỬ LÝ NÚT THU GỌN / MỞ RỘNG MENU
+-- 4. XỬ LÝ CHUYỂN TAB & THU GỌN
 -- ==========================================
+MainTabBtn.MouseButton1Click:Connect(function()
+	MainContent.Visible = true
+	SpeedContent.Visible = false
+	MainTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+	MainTabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	SpeedTabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+	SpeedTabBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+end)
+
+SpeedTabBtn.MouseButton1Click:Connect(function()
+	MainContent.Visible = false
+	SpeedContent.Visible = true
+	SpeedTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+	SpeedTabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	MainTabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+	MainTabBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+end)
+
 MinimizeBtn.MouseButton1Click:Connect(function()
 	SmallBtn.Position = MainFrame.Position
 	MainFrame.Visible = false
@@ -106,15 +208,13 @@ SmallBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- 3. LOGIC SKIP PROMPT (BỎ QUA THỜI GIAN GIỮ - CHUẨN GỐC)
+-- 5. LOGIC SKIP PROMPT & ANTI-AFK (TAB MAIN)
 -- ==========================================
 PromptToggle.MouseButton1Click:Connect(function()
 	skipPromptActive = not skipPromptActive
 	if skipPromptActive then
 		PromptToggle.Text = "Skip Prompt: ON"
 		PromptToggle.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
-		
-		-- Ép thời gian giữ của tất cả Prompt về 0 giây
 		for _, prompt in ipairs(workspace:GetDescendants()) do
 			if prompt:IsA("ProximityPrompt") then
 				prompt.HoldDuration = 0
@@ -126,43 +226,60 @@ PromptToggle.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Tự áp dụng khi có Prompt mới xuất hiện
 workspace.DescendantAdded:Connect(function(descendant)
 	if skipPromptActive and descendant:IsA("ProximityPrompt") then
 		descendant.HoldDuration = 0
 	end
 end)
 
--- ==========================================
--- 4. LOGIC ANTI-AFK THUẦN TÚY (NHẤN PHÍM W, S, A, D TỰ NHIÊN)
--- ==========================================
 AFKToggle.MouseButton1Click:Connect(function()
 	antiAFKActive = not antiAFKActive
 	if antiAFKActive then
-		AFKToggle.Text = "Anti-AFK (WASD): ON"
+		AFKToggle.Text = "Anti-AFK: ON"
 		AFKToggle.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
 	else
-		AFKToggle.Text = "Anti-AFK (WASD): OFF"
+		AFKToggle.Text = "Anti-AFK: OFF"
 		AFKToggle.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
 	end
 end)
 
--- Vòng lặp mô phỏng bấm phím di chuyển trên bàn phím PC định kỳ
-task.spawn(function()
-	local keys = {Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D}
-	while true do
-		task.wait(45) -- Thực hiện mỗi 45 giây
-		if antiAFKActive then
-			pcall(function()
-				-- Chọn ngẫu nhiên 1 phím trong cụm WASD
-				local randomKey = keys[math.random(1, #keys)]
-				
-				-- Nhấn phím xuống
-				VirtualInputManager:SendKeyEvent(true, randomKey, false, game)
-				task.wait(0.15)
-				-- Nhả phím ra
-				VirtualInputManager:SendKeyEvent(false, randomKey, false, game)
-			end)
+LocalPlayer.Idled:Connect(function()
+	if antiAFKActive then
+		pcall(function()
+			VirtualUser:CaptureController()
+			VirtualUser:ClickButton2(Vector2.new(0, 0))
+		end)
+	end
+end)
+
+-- ==========================================
+-- 6. LOGIC SPEED (TAB SPEED)
+-- ==========================================
+PercentInput.FocusLost:Connect(function()
+	local val = tonumber(PercentInput.Text)
+	if val then
+		speedPercentage = val
+	end
+end)
+
+SpeedToggle.MouseButton1Click:Connect(function()
+	speedActive = not speedActive
+	if speedActive then
+		SpeedToggle.Text = "Speed: ON"
+		SpeedToggle.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
+	else
+		SpeedToggle.Text = "Speed: OFF"
+		SpeedToggle.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+	end
+end)
+
+RunService.Stepped:Connect(function()
+	if speedActive and speedPercentage > 0 then
+		local character = LocalPlayer.Character
+		if character and character:FindFirstChild("Humanoid") then
+			local humanoid = character.Humanoid
+			local currentBase = humanoid.WalkSpeed
+			humanoid.WalkSpeed = currentBase * (1 + (speedPercentage / 100))
 		end
 	end
 end)

@@ -1,4 +1,4 @@
---// STEAL AN EGG - SUPER HUB (WINDUI)
+--// WINDUI FULL HUB (STEAL AN EGG)
 
 local WindUI = loadstring(game:HttpGet(
     "https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"
@@ -9,14 +9,14 @@ local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 local Workspace = game:GetService("Workspace")
 
 --------------------------------------------------
--- WINDOW CONFIG
+-- WINDOW
 --------------------------------------------------
 
 local Window = WindUI:CreateWindow({
     Title = "Steal an Egg - Super Hub",
     Icon = "egg",
-    Author = "VIP Buffer",
-    Folder = "StealAnEggConfig",
+    Author = "ftgs",
+    Folder = "MySuperHub",
 
     Size = UDim2.fromOffset(580, 460),
     MinSize = Vector2.new(560, 350),
@@ -29,26 +29,28 @@ local Window = WindUI:CreateWindow({
     SideBarWidth = 200
 })
 
-Window:EditOpenButton({
-    Title = "Open Hub",
-    Icon = "menu",
-    CornerRadius = UDim2.new(0, 8),
-    StrokeThickness = 2,
-    Draggable = true,
-})
-
 --------------------------------------------------
 -- TABS
 --------------------------------------------------
 
-local MainTab = Window:Tab({
-    Title = "Auto Egg",
-    Icon = "egg"
+local Main = Window:Tab({
+    Title = "Main",
+    Icon = "home"
 })
 
-local PlayerTab = Window:Tab({
-    Title = "Player & Misc",
+local Player = Window:Tab({
+    Title = "Player",
     Icon = "user"
+})
+
+local Misc = Window:Tab({
+    Title = "Misc",
+    Icon = "settings"
+})
+
+local Spotify = Window:Tab({
+    Title = "Spotify",
+    Icon = "music"
 })
 
 --------------------------------------------------
@@ -92,17 +94,15 @@ StickCorner.CornerRadius = UDim2.new(1, 0)
 StickCorner.Parent = Stick
 
 --------------------------------------------------
--- CHỨC NĂNG CHÍNH (AUTO EGG)
+-- MAIN : STEAL EGG & ANTI-AFK
 --------------------------------------------------
 
 local autoStealActive = false
 local skipPromptActive = false
 local antiAFKActive = false
 
--- 1. Skip Hold Time (Prompt)
-MainTab:Toggle({
-    Title = "Skip Hold (Instant Steal)",
-    Desc = "Hủy thời gian chờ đè phím E khi nhặt/cướp trứng",
+Main:Toggle({
+    Title = "Instant Steal (Skip Hold)",
     Value = false,
     Callback = function(v)
         skipPromptActive = v
@@ -113,60 +113,175 @@ MainTab:Toggle({
                 end
             end
         end
+
         if WindUI.Notify then
-            WindUI:Notify({ Title = "Steal an Egg", Content = v and "Đã BẬT Instant Steal" or "Đã TẮT Instant Steal", Duration = 2 })
+            WindUI:Notify({
+                Title = "Main",
+                Content = v and "Instant Steal Enabled" or "Instant Steal Disabled",
+                Duration = 2
+            })
         end
     end
 })
 
--- 2. Auto Steal ProximityPrompts
-MainTab:Toggle({
+Main:Toggle({
     Title = "Auto Steal Nearby Eggs",
-    Desc = "Tự động nhặt trứng xung quanh vị trí nhân vật",
     Value = false,
     Callback = function(v)
         autoStealActive = v
+
         if WindUI.Notify then
-            WindUI:Notify({ Title = "Steal an Egg", Content = v and "Đã BẬT Auto Steal" or "Đã TẮT Auto Steal", Duration = 2 })
+            WindUI:Notify({
+                Title = "Main",
+                Content = v and "Auto Steal Enabled" or "Auto Steal Disabled",
+                Duration = 2
+            })
         end
     end
 })
 
--- 3. Anti-AFK
-MainTab:Toggle({
+Main:Toggle({
     Title = "Anti-AFK (JoyStick)",
-    Desc = "Giữ kết nối máy chủ không bị Kick AFK",
     Value = false,
     Callback = function(v)
         antiAFKActive = v
         if not v then
             Stick.Position = UDim2.new(0.5, -13, 0.5, -13)
         end
+
+        if WindUI.Notify then
+            WindUI:Notify({
+                Title = "Main",
+                Content = v and "Anti-AFK Enabled" or "Anti-AFK Disabled",
+                Duration = 2
+            })
+        end
     end
 })
 
 --------------------------------------------------
--- PLAYER & MISC TAB
+-- PLAYER : SPEED SLIDER
 --------------------------------------------------
 
-local walkSpeedVal = 16
+local targetSpeed = 16
+local currentSpeed = 16
 
-PlayerTab:Slider({
+Player:Slider({
     Title = "WalkSpeed",
     Step = 1,
-    Value = { Min = 16, Max = 150, Default = 16 },
+    Value = {
+        Min = 16,
+        Max = 120,
+        Default = 16
+    },
     Callback = function(v)
-        walkSpeedVal = v
-        local char = LocalPlayer.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hum then hum.WalkSpeed = v end
+        targetSpeed = v
     end
 })
 
-PlayerTab:Button({
-    Title = "Rejoin Server",
+game:GetService("RunService").RenderStepped:Connect(function()
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+
+    if hum then
+        currentSpeed += (targetSpeed - currentSpeed) * 0.15
+        hum.WalkSpeed = currentSpeed
+    end
+end)
+
+--------------------------------------------------
+-- MISC : FPS + REJOIN
+--------------------------------------------------
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "FPSCounter"
+gui.ResetOnSpawn = false
+gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local fpsLabel = Instance.new("TextLabel")
+fpsLabel.Size = UDim2.new(0, 100, 0, 20)
+fpsLabel.Position = UDim2.new(0, 5, 0, 5)
+fpsLabel.BackgroundTransparency = 1
+fpsLabel.TextColor3 = Color3.new(1,1,1)
+fpsLabel.Font = Enum.Font.SourceSansBold
+fpsLabel.TextSize = 18
+fpsLabel.Text = "FPS: ..."
+fpsLabel.Parent = gui
+
+local frames = 0
+local last = tick()
+
+game:GetService("RunService").RenderStepped:Connect(function()
+    frames += 1
+    if tick() - last >= 1 then
+        fpsLabel.Text = "FPS: " .. frames
+        frames = 0
+        last = tick()
+    end
+end)
+
+Misc:Button({
+    Title = "Rejoin",
     Callback = function()
         game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer)
+    end
+})
+
+--------------------------------------------------
+-- SPOTIFY : LOCAL MUSIC
+--------------------------------------------------
+
+local SoundService = game:GetService("SoundService")
+
+local Music = Instance.new("Sound")
+Music.Name = "SpotifyHubMusic"
+Music.Parent = SoundService
+Music.Looped = true
+Music.Volume = 0.5
+
+local MusicEnabled = false
+
+Spotify:Toggle({
+    Title = "Music",
+    Value = false,
+    Callback = function(v)
+        MusicEnabled = v
+        if not v then
+            Music:Stop()
+        end
+    end
+})
+
+local function AddSong(name, id)
+    Spotify:Button({
+        Title = name,
+        Callback = function()
+            if not MusicEnabled then return end
+            Music:Stop()
+            Music.SoundId = "rbxassetid://" .. tostring(id)
+            Music:Play()
+
+            if WindUI.Notify then
+                WindUI:Notify({
+                    Title = "Spotify",
+                    Content = "Playing: " .. name,
+                    Duration = 2
+                })
+            end
+        end
+    })
+end
+
+AddSong("Quên Đi Câu Chuyện Khô Gà", 99152674992699)
+AddSong("Đừng Đóng Vai Anh", 133758365650956)
+AddSong("DreamCore 核", 82149511707056)
+
+Spotify:Slider({
+    Title = "Volume",
+    Step = 1,
+    Value = { Min = 0, Max = 10, Default = 5 },
+    Callback = function(v)
+        Music.Volume = v / 10
     end
 })
 
@@ -174,7 +289,6 @@ PlayerTab:Button({
 -- SYSTEM LOOPS
 --------------------------------------------------
 
--- Cập nhật ProximityPrompt mới xuất hiện
 Workspace.DescendantAdded:Connect(function(descendant)
     if skipPromptActive and descendant:IsA("ProximityPrompt") then
         descendant.HoldDuration = 0

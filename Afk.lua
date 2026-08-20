@@ -1,6 +1,6 @@
--- LocalScript Menu AFK Giả Lập Phím Delta Keyboard (Nút "P")
+-- LocalScript Menu AFK dùng VirtualInputManager Tối Ưu (Nút "P")
 local Players = game:GetService("Players")
-local VirtualInputManager = game:GetService("VirtualInputManager")
+local vim = game:GetService("VirtualInputManager")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
 -- Biến lưu trạng thái
@@ -94,7 +94,7 @@ SmallBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- 3. LOGIC ANTI-AFK GIẢ LẬP BẤM PHÍM DẠNG DELTA KEYBOARD
+-- 3. LOGIC ANTI-AFK DÙNG VIRTUALINPUTMANAGER (NÉ KICK)
 -- ==========================================
 AFKToggle.MouseButton1Click:Connect(function()
 	antiAFKActive = not antiAFKActive
@@ -107,23 +107,33 @@ AFKToggle.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Vòng lặp mô phỏng đè phím W rồi lùi lại bằng phím S mỗi 45 giây
+-- Vòng lặp gửi tín hiệu phím W kết hợp nhấp chuột màn hình để qua mặt Anti-Cheat
 task.spawn(function()
 	while true do
-		task.wait(45)
+		task.wait(40) -- Thực hiện mỗi 40 giây
 		if antiAFKActive then
 			pcall(function()
-				-- Bấm giữ phím W (Đi tới)
-				VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.W, false, game)
-				task.wait(0.3)
-				VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.W, false, game)
+				local viewport = workspace.CurrentCamera.ViewportSize
+				local centerX, centerY = viewport.X / 2, viewport.Y / 2
+				
+				-- 1. Giả lập chạm nhẹ vào màn hình (Tạo Touch/Mouse Context)
+				vim:SendMouseButtonEvent(centerX, centerY, 0, true, game, 0)
+				task.wait(0.05)
+				vim:SendMouseButtonEvent(centerX, centerY, 0, false, game, 0)
 				
 				task.wait(0.1)
 				
-				-- Bấm giữ phím S (Thùi lại)
-				VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.S, false, game)
-				task.wait(0.3)
-				VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.S, false, game)
+				-- 2. Gửi lệnh bấm phím W (Đoạn code gốc của ông)
+				vim:SendKeyEvent(true, Enum.KeyCode.W, false, game)
+				task.wait(0.5)
+				vim:SendKeyEvent(false, Enum.KeyCode.W, false, game)
+				
+				task.wait(0.1)
+				
+				-- 3. Lùi lại vị trí cũ bằng phím S để không lệch tọa độ Farm
+				vim:SendKeyEvent(true, Enum.KeyCode.S, false, game)
+				task.wait(0.5)
+				vim:SendKeyEvent(false, Enum.KeyCode.S, false, game)
 			end)
 		end
 	end

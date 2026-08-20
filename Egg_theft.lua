@@ -1,8 +1,9 @@
---// RAYFIELD - SKIP PROMPT & DIRECT MOVE ANTI-AFK
+--// RAYFIELD - SKIP PROMPT & RENDER-LOOP JOYSTICK ANTI-AFK
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
@@ -64,15 +65,15 @@ MainTab:CreateToggle({
 })
 
 --------------------------------------------------
--- ANTI AFK (TỰ DI CHUYỂN TIẾN LÊN)
+-- ANTI AFK (RENDER LOOP FORCED DI CHUYỂN)
 --------------------------------------------------
 
 local antiAFKActive = false
 
 MainTab:CreateToggle({
-    Name = "Anti-AFK (Auto Move Forward)",
+    Name = "Anti-AFK (Forced Joystick Move)",
     CurrentValue = false,
-    Flag = "AutoMoveAFK",
+    Flag = "AntiAFKForcedMove",
     Callback = function(Value)
         antiAFKActive = Value
 
@@ -99,34 +100,43 @@ Workspace.DescendantAdded:Connect(function(descendant)
 end)
 
 --------------------------------------------------
--- VÒNG LẶP ÉP DI CHUYỂN TIẾN LÊN (CỨ 30S)
+-- LOGIC ĐÈ TÍN HIỆU DI CHUYỂN LIÊN TỤC TRÊN FRAME
+--------------------------------------------------
+
+local function ForceMoveForward(duration)
+    local startTime = tick()
+    local connection
+    
+    -- Lắng nghe mỗi khung hình để ép di chuyển, không cho Mobile Touch reset về 0
+    connection = RunService.RenderStepped:Connect(function()
+        if tick() - startTime >= duration then
+            connection:Disconnect()
+            return
+        end
+        
+        pcall(function()
+            local char = LocalPlayer.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            
+            if hum then
+                -- Lấy hướng mặt nhân vật đang nhìn và đẩy tiến lên
+                local lookVector = char.HumanoidRootPart.CFrame.LookVector
+                hum:Move(lookVector, false)
+            end
+        end)
+    end)
+end
+
+--------------------------------------------------
+-- VÒNG LẶP ANTI-AFK MỖI 30 GIÂY
 --------------------------------------------------
 
 task.spawn(function()
     while true do
         task.wait(30) -- Thực hiện mỗi 30 giây
         if antiAFKActive then
-            pcall(function()
-                local character = LocalPlayer.Character
-                if character then
-                    local humanoid = character:FindFirstChildOfClass("Humanoid")
-                    local rootPart = character:FindFirstChild("HumanoidRootPart")
-
-                    if humanoid and rootPart then
-                        -- Tự tạo lực di chuyển hướng về phía trước của nhân vật trong 0.3 giây
-                        local moveDirection = rootPart.CFrame.LookVector
-                        
-                        local startTime = tick()
-                        while tick() - startTime < 0.3 do
-                            humanoid:Move(moveDirection, false)
-                            task.wait()
-                        end
-                        
-                        -- Dừng di chuyển
-                        humanoid:Move(Vector3.new(0, 0, 0), false)
-                    end
-                end
-            end)
+            -- Ép nhân vật bước tới trong 0.5 giây trên từng khung hình
+            ForceMoveForward(0.5)
         end
     end
 end)

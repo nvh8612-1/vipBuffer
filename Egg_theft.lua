@@ -1,20 +1,22 @@
---// WINDUI FULL HUB (FIXED TAB)
+--// STEAL AN EGG - SUPER HUB (WINDUI)
+
 local WindUI = loadstring(game:HttpGet(
     "https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"
 ))()
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
+local Workspace = game:GetService("Workspace")
 
 --------------------------------------------------
--- WINDOW
+-- WINDOW CONFIG
 --------------------------------------------------
 
 local Window = WindUI:CreateWindow({
-    Title = "VIP Buffer Hub",
-    Icon = "zap",
+    Title = "Steal an Egg - Super Hub",
+    Icon = "egg",
     Author = "VIP Buffer",
-    Folder = "VIPBufferConfig",
+    Folder = "StealAnEggConfig",
 
     Size = UDim2.fromOffset(580, 460),
     MinSize = Vector2.new(560, 350),
@@ -27,7 +29,6 @@ local Window = WindUI:CreateWindow({
     SideBarWidth = 200
 })
 
--- Nút bấm mở lại Hub khi thu gọn trên Mobile
 Window:EditOpenButton({
     Title = "Open Hub",
     Icon = "menu",
@@ -41,22 +42,27 @@ Window:EditOpenButton({
 --------------------------------------------------
 
 local MainTab = Window:Tab({
-    Title = "Main Features",
-    Icon = "home"
+    Title = "Auto Egg",
+    Icon = "egg"
+})
+
+local PlayerTab = Window:Tab({
+    Title = "Player & Misc",
+    Icon = "user"
 })
 
 --------------------------------------------------
--- JOYSTICK ẢO TRÊN MÀN HÌNH (CHO ANTI-AFK)
+-- JOYSTICK ẢO (ANTI-AFK)
 --------------------------------------------------
 
 local parentGui = (gethui and gethui()) or game:GetService("CoreGui") or LocalPlayer:WaitForChild("PlayerGui")
 
-if parentGui:FindFirstChild("WindAFKJoystick") then
-	parentGui.WindAFKJoystick:Destroy()
+if parentGui:FindFirstChild("EggAFKJoystick") then
+	parentGui.EggAFKJoystick:Destroy()
 end
 
 local JoyGui = Instance.new("ScreenGui")
-JoyGui.Name = "WindAFKJoystick"
+JoyGui.Name = "EggAFKJoystick"
 JoyGui.ResetOnSpawn = false
 JoyGui.DisplayOrder = 999999
 JoyGui.Parent = parentGui
@@ -86,69 +92,118 @@ StickCorner.CornerRadius = UDim2.new(1, 0)
 StickCorner.Parent = Stick
 
 --------------------------------------------------
--- MAIN TOGGLES
+-- CHỨC NĂNG CHÍNH (AUTO EGG)
 --------------------------------------------------
 
-local antiAFKActive = false
+local autoStealActive = false
 local skipPromptActive = false
+local antiAFKActive = false
 
--- 1. Anti-AFK Toggle
+-- 1. Skip Hold Time (Prompt)
 MainTab:Toggle({
-    Title = "Anti-AFK (JoyStick)",
-    Desc = "Tự động trượt nhẹ lên phía trước để tránh bị Kick AFK",
+    Title = "Skip Hold (Instant Steal)",
+    Desc = "Hủy thời gian chờ đè phím E khi nhặt/cướp trứng",
     Value = false,
-
-    Callback = function(v)
-        antiAFKActive = v
-        if not v then
-            Stick.Position = UDim2.new(0.5, -13, 0.5, -13)
-        end
-
-        if WindUI.Notify then
-            WindUI:Notify({
-                Title = "Anti-AFK",
-                Content = v and "Đã BẬT Anti-AFK" or "Đã TẮT Anti-AFK",
-                Duration = 2
-            })
-        end
-    end
-})
-
--- 2. Skip Prompt Toggle
-MainTab:Toggle({
-    Title = "Skip Prompt",
-    Desc = "Xóa thời gian giữ phím tương tác (ProximityPrompt)",
-    Value = false,
-
     Callback = function(v)
         skipPromptActive = v
-
         if v then
-            for _, prompt in ipairs(workspace:GetDescendants()) do
+            for _, prompt in ipairs(Workspace:GetDescendants()) do
                 if prompt:IsA("ProximityPrompt") then
                     prompt.HoldDuration = 0
                 end
             end
         end
-
         if WindUI.Notify then
-            WindUI:Notify({
-                Title = "Skip Prompt",
-                Content = v and "Đã BẬT Skip Prompt" or "Đã TẮT Skip Prompt",
-                Duration = 2
-            })
+            WindUI:Notify({ Title = "Steal an Egg", Content = v and "Đã BẬT Instant Steal" or "Đã TẮT Instant Steal", Duration = 2 })
+        end
+    end
+})
+
+-- 2. Auto Steal ProximityPrompts
+MainTab:Toggle({
+    Title = "Auto Steal Nearby Eggs",
+    Desc = "Tự động nhặt trứng xung quanh vị trí nhân vật",
+    Value = false,
+    Callback = function(v)
+        autoStealActive = v
+        if WindUI.Notify then
+            WindUI:Notify({ Title = "Steal an Egg", Content = v and "Đã BẬT Auto Steal" or "Đã TẮT Auto Steal", Duration = 2 })
+        end
+    end
+})
+
+-- 3. Anti-AFK
+MainTab:Toggle({
+    Title = "Anti-AFK (JoyStick)",
+    Desc = "Giữ kết nối máy chủ không bị Kick AFK",
+    Value = false,
+    Callback = function(v)
+        antiAFKActive = v
+        if not v then
+            Stick.Position = UDim2.new(0.5, -13, 0.5, -13)
         end
     end
 })
 
 --------------------------------------------------
--- LOGIC TÍNH NĂNG
+-- PLAYER & MISC TAB
 --------------------------------------------------
 
--- Tự áp dụng HoldDuration = 0 khi vật thể mới xuất hiện
-workspace.DescendantAdded:Connect(function(descendant)
+local walkSpeedVal = 16
+
+PlayerTab:Slider({
+    Title = "WalkSpeed",
+    Step = 1,
+    Value = { Min = 16, Max = 150, Default = 16 },
+    Callback = function(v)
+        walkSpeedVal = v
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then hum.WalkSpeed = v end
+    end
+})
+
+PlayerTab:Button({
+    Title = "Rejoin Server",
+    Callback = function()
+        game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer)
+    end
+})
+
+--------------------------------------------------
+-- SYSTEM LOOPS
+--------------------------------------------------
+
+-- Cập nhật ProximityPrompt mới xuất hiện
+Workspace.DescendantAdded:Connect(function(descendant)
     if skipPromptActive and descendant:IsA("ProximityPrompt") then
         descendant.HoldDuration = 0
+    end
+end)
+
+-- Vòng lặp Auto Steal Egg
+task.spawn(function()
+    while true do
+        task.wait(0.2)
+        if autoStealActive then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                if root then
+                    for _, prompt in ipairs(Workspace:GetDescendants()) do
+                        if prompt:IsA("ProximityPrompt") and prompt.Enabled then
+                            local parentPart = prompt.Parent
+                            if parentPart and parentPart:IsA("BasePart") then
+                                local dist = (root.Position - parentPart.Position).Magnitude
+                                if dist <= prompt.MaxActivationDistance then
+                                    fireproximityprompt(prompt)
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
     end
 end)
 
@@ -161,19 +216,13 @@ task.spawn(function()
                 local character = LocalPlayer.Character
                 local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 
-                -- Kéo nhẹ Joystick ảo tiến lên
                 Stick:TweenPosition(UDim2.new(0.5, -13, 0.05, -13), "Out", "Quad", 0.2, true)
-                if humanoid then
-                    humanoid:Move(Vector3.new(0, 0, -1), true)
-                end
+                if humanoid then humanoid:Move(Vector3.new(0, 0, -1), true) end
                 
                 task.wait(0.5)
 
-                -- Buông Joystick về chỗ cũ
                 Stick:TweenPosition(UDim2.new(0.5, -13, 0.5, -13), "Out", "Quad", 0.2, true)
-                if humanoid then
-                    humanoid:Move(Vector3.new(0, 0, 0), true)
-                end
+                if humanoid then humanoid:Move(Vector3.new(0, 0, 0), true) end
             end)
         end
     end

@@ -1,6 +1,5 @@
--- LocalScript Menu Anti-AFK độc lập (Nút thu gọn "P")
+-- LocalScript Menu AFK Tự Kéo Di Chuyển (Nút "P" - Né Kick 100%)
 local Players = game:GetService("Players")
-local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
 -- Biến lưu trạng thái
@@ -15,7 +14,7 @@ if parentGui:FindFirstChild("DeltaAFKMenu") then
 end
 
 -- ==========================================
--- 1. TẠO GIAO DIỆN MENU AFK
+-- 1. TẠO GIAO DIỆN MENU AFK (NÚT P)
 -- ==========================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "DeltaAFKMenu"
@@ -25,7 +24,7 @@ ScreenGui.Parent = parentGui
 -- Khung Menu AFK
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 200, 0, 110)
-MainFrame.Position = UDim2.new(0.5, 130, 0.35, -55) -- Đặt lệch sang phải để không đè Menu chính
+MainFrame.Position = UDim2.new(0.5, 130, 0.35, -55) -- Đặt lệch bên phải Menu cũ
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -94,7 +93,7 @@ SmallBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- 3. LOGIC ANTI-AFK CHUẨN NÉ KICK
+-- 3. LOGIC ANTI-AFK TỰ KÉO JOYSTICK DI CHUYỂN
 -- ==========================================
 AFKToggle.MouseButton1Click:Connect(function()
 	antiAFKActive = not antiAFKActive
@@ -107,12 +106,27 @@ AFKToggle.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Bắt sự kiện Treo máy từ Roblox
-LocalPlayer.Idled:Connect(function()
-	if antiAFKActive then
-		pcall(function()
-			VirtualUser:CaptureController()
-			VirtualUser:ClickButton2(Vector2.new(0, 0))
-		end)
+-- Vòng lặp tự động nhúc nhích nhân vật mỗi 60 giây
+task.spawn(function()
+	while true do
+		task.wait(60)
+		if antiAFKActive then
+			pcall(function()
+				local character = LocalPlayer.Character
+				if character then
+					local humanoid = character:FindFirstChildOfClass("Humanoid")
+					if humanoid then
+						-- Kéo tiến 1 bước
+						humanoid:Move(Vector3.new(0, 0, -1), true)
+						task.wait(0.2)
+						-- Kéo lùi về chỗ cũ
+						humanoid:Move(Vector3.new(0, 0, 1), true)
+						task.wait(0.2)
+						-- Dừng lại
+						humanoid:Move(Vector3.new(0, 0, 0), true)
+					end
+				end
+			end)
+		end
 	end
 end)

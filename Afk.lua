@@ -1,41 +1,34 @@
--- LocalScript Menu AFK dùng VirtualInputManager Tối Ưu (Nút "P")
+-- LocalScript Menu AFK Joystick Ảo (Nút "P" - Chỉ Kéo Tiến Tới)
 local Players = game:GetService("Players")
-local vim = game:GetService("VirtualInputManager")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
--- Biến lưu trạng thái
 local antiAFKActive = false
-
--- Lấy Parent GUI chuẩn của Delta
 local parentGui = (gethui and gethui()) or game:GetService("CoreGui") or LocalPlayer:WaitForChild("PlayerGui")
 
--- Xóa Menu AFK cũ nếu đã chạy trước đó
 if parentGui:FindFirstChild("DeltaAFKMenu") then
 	parentGui.DeltaAFKMenu:Destroy()
 end
 
 -- ==========================================
--- 1. TẠO GIAO DIỆN MENU AFK (NÚT P)
+-- 1. GIAO DIỆN MENU VÀ JOYSTICK
 -- ==========================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "DeltaAFKMenu"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = parentGui
 
--- Khung Menu AFK
+-- Khung Menu Chữ P
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 200, 0, 110)
-MainFrame.Position = UDim2.new(0.5, 130, 0.35, -55) -- Đặt lệch bên phải
+MainFrame.Position = UDim2.new(0.5, 130, 0.35, -55)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 
--- Tiêu đề Menu
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -30, 0, 35)
-Title.Position = UDim2.new(0, 0, 0, 0)
 Title.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 Title.Text = "AFK Menu"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -43,7 +36,6 @@ Title.TextSize = 14
 Title.Font = Enum.Font.SourceSansBold
 Title.Parent = MainFrame
 
--- Nút Thu Gọn (-)
 local MinimizeBtn = Instance.new("TextButton")
 MinimizeBtn.Size = UDim2.new(0, 30, 0, 35)
 MinimizeBtn.Position = UDim2.new(1, -30, 0, 0)
@@ -54,7 +46,6 @@ MinimizeBtn.TextSize = 18
 MinimizeBtn.Font = Enum.Font.SourceSansBold
 MinimizeBtn.Parent = MainFrame
 
--- Nút Bật/Tắt Anti-AFK
 local AFKToggle = Instance.new("TextButton")
 AFKToggle.Size = UDim2.new(0.9, 0, 0, 40)
 AFKToggle.Position = UDim2.new(0.05, 0, 0, 50)
@@ -64,7 +55,7 @@ AFKToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
 AFKToggle.Font = Enum.Font.SourceSansBold
 AFKToggle.Parent = MainFrame
 
--- Nút Chữ "P" Thu Gọn (Ban đầu ẩn)
+-- Nút "P" Thu Gọn
 local SmallBtn = Instance.new("TextButton")
 SmallBtn.Size = UDim2.new(0, 40, 0, 40)
 SmallBtn.Position = MainFrame.Position
@@ -78,8 +69,36 @@ SmallBtn.Active = true
 SmallBtn.Draggable = true
 SmallBtn.Parent = ScreenGui
 
+-- ------------------------------------------
+-- JOYSTICK ẢO TRÊN MÀN HÌNH
+-- ------------------------------------------
+local BaseJoystick = Instance.new("Frame")
+BaseJoystick.Size = UDim2.new(0, 75, 0, 75)
+BaseJoystick.Position = UDim2.new(0.08, 0, 0.65, 0) -- Hiển thị rõ ngoài màn hình góc dưới bên trái
+BaseJoystick.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+BaseJoystick.BackgroundTransparency = 0.4
+BaseJoystick.Active = true
+BaseJoystick.Draggable = true -- Có thể kéo di chuyển Joystick tới chỗ tùy thích
+BaseJoystick.Parent = ScreenGui
+
+local BaseCorner = Instance.new("UICorner")
+BaseCorner.CornerRadius = UDim2.new(1, 0)
+BaseCorner.Parent = BaseJoystick
+
+-- Cần gạt Joystick (Nút tròn nhỏ bên trong)
+local Stick = Instance.new("Frame")
+Stick.Size = UDim2.new(0, 30, 0, 30)
+Stick.Position = UDim2.new(0.5, -15, 0.5, -15) -- Nằm chính giữa Base
+Stick.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
+Stick.BackgroundTransparency = 0.2
+Stick.Parent = BaseJoystick
+
+local StickCorner = Instance.new("UICorner")
+StickCorner.CornerRadius = UDim2.new(1, 0)
+StickCorner.Parent = Stick
+
 -- ==========================================
--- 2. XỬ LÝ NÚT THU GỌN / MỞ RỘNG
+-- 2. THU GỌN / MỞ RỘNG
 -- ==========================================
 MinimizeBtn.MouseButton1Click:Connect(function()
 	SmallBtn.Position = MainFrame.Position
@@ -94,7 +113,7 @@ SmallBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- 3. LOGIC ANTI-AFK DÙNG VIRTUALINPUTMANAGER (NÉ KICK)
+-- 3. LOGIC TRƯỢT JOYSTICK TỰ ĐỘNG (CHỈ TIẾN TỚI)
 -- ==========================================
 AFKToggle.MouseButton1Click:Connect(function()
 	antiAFKActive = not antiAFKActive
@@ -104,36 +123,33 @@ AFKToggle.MouseButton1Click:Connect(function()
 	else
 		AFKToggle.Text = "Anti-AFK: OFF"
 		AFKToggle.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+		-- Trả joystick về vị trí giữa
+		Stick.Position = UDim2.new(0.5, -15, 0.5, -15)
 	end
 end)
 
--- Vòng lặp gửi tín hiệu phím W kết hợp nhấp chuột màn hình để qua mặt Anti-Cheat
+-- Vòng lặp tự kéo Joystick tiến về phía trước rồi thả ra
 task.spawn(function()
 	while true do
-		task.wait(40) -- Thực hiện mỗi 40 giây
+		task.wait(40) -- Cứ mỗi 40 giây tự nhúc nhích 1 lần
 		if antiAFKActive then
 			pcall(function()
-				local viewport = workspace.CurrentCamera.ViewportSize
-				local centerX, centerY = viewport.X / 2, viewport.Y / 2
+				local character = LocalPlayer.Character
+				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+
+				-- 1. Trượt nút Joystick thẳng lên phía trước
+				Stick:TweenPosition(UDim2.new(0.5, -15, 0.05, -15), "Out", "Quad", 0.2, true)
+				if humanoid then
+					humanoid:Move(Vector3.new(0, 0, -1), true)
+				end
 				
-				-- 1. Giả lập chạm nhẹ vào màn hình (Tạo Touch/Mouse Context)
-				vim:SendMouseButtonEvent(centerX, centerY, 0, true, game, 0)
-				task.wait(0.05)
-				vim:SendMouseButtonEvent(centerX, centerY, 0, false, game, 0)
-				
-				task.wait(0.1)
-				
-				-- 2. Gửi lệnh bấm phím W (Đoạn code gốc của ông)
-				vim:SendKeyEvent(true, Enum.KeyCode.W, false, game)
-				task.wait(0.5)
-				vim:SendKeyEvent(false, Enum.KeyCode.W, false, game)
-				
-				task.wait(0.1)
-				
-				-- 3. Lùi lại vị trí cũ bằng phím S để không lệch tọa độ Farm
-				vim:SendKeyEvent(true, Enum.KeyCode.S, false, game)
-				task.wait(0.5)
-				vim:SendKeyEvent(false, Enum.KeyCode.S, false, game)
+				task.wait(0.5) -- Giữ đẩy lên trong 0.5s
+
+				-- 2. Thả cần Joystick về lại chính giữa (Dừng di chuyển)
+				Stick:TweenPosition(UDim2.new(0.5, -15, 0.5, -15), "Out", "Quad", 0.2, true)
+				if humanoid then
+					humanoid:Move(Vector3.new(0, 0, 0), true)
+				end
 			end)
 		end
 	end

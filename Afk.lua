@@ -1,4 +1,4 @@
--- LocalScript Menu AFK Joystick Ảo (Nút "P" - Chỉ Kéo Tiến Tới)
+-- LocalScript Menu AFK Joystick (Fix lỗi không bấm được nút)
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
@@ -10,11 +10,12 @@ if parentGui:FindFirstChild("DeltaAFKMenu") then
 end
 
 -- ==========================================
--- 1. GIAO DIỆN MENU VÀ JOYSTICK
+-- 1. GIAO DIỆN SCREEN GUI
 -- ==========================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "DeltaAFKMenu"
 ScreenGui.ResetOnSpawn = false
+ScreenGui.DisplayOrder = 9999 -- Ép hiển thị lên trên cùng để không bị đè
 ScreenGui.Parent = parentGui
 
 -- Khung Menu Chữ P
@@ -25,6 +26,7 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
+MainFrame.ZIndex = 10
 MainFrame.Parent = ScreenGui
 
 local Title = Instance.new("TextLabel")
@@ -34,6 +36,7 @@ Title.Text = "AFK Menu"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 14
 Title.Font = Enum.Font.SourceSansBold
+Title.ZIndex = 11
 Title.Parent = MainFrame
 
 local MinimizeBtn = Instance.new("TextButton")
@@ -44,6 +47,7 @@ MinimizeBtn.Text = "-"
 MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 MinimizeBtn.TextSize = 18
 MinimizeBtn.Font = Enum.Font.SourceSansBold
+MinimizeBtn.ZIndex = 11
 MinimizeBtn.Parent = MainFrame
 
 local AFKToggle = Instance.new("TextButton")
@@ -53,6 +57,7 @@ AFKToggle.Text = "Anti-AFK: OFF"
 AFKToggle.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
 AFKToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
 AFKToggle.Font = Enum.Font.SourceSansBold
+AFKToggle.ZIndex = 12 -- Cao nhất trong Menu để nhận Cảm ứng/Click
 AFKToggle.Parent = MainFrame
 
 -- Nút "P" Thu Gọn
@@ -67,30 +72,32 @@ SmallBtn.Font = Enum.Font.SourceSansBold
 SmallBtn.Visible = false
 SmallBtn.Active = true
 SmallBtn.Draggable = true
+SmallBtn.ZIndex = 15
 SmallBtn.Parent = ScreenGui
 
 -- ------------------------------------------
--- JOYSTICK ẢO TRÊN MÀN HÌNH
+-- JOYSTICK ẢO HIỂN THỊ RIÊNG BÊN NGOÀI
 -- ------------------------------------------
 local BaseJoystick = Instance.new("Frame")
 BaseJoystick.Size = UDim2.new(0, 75, 0, 75)
-BaseJoystick.Position = UDim2.new(0.08, 0, 0.65, 0) -- Hiển thị rõ ngoài màn hình góc dưới bên trái
+BaseJoystick.Position = UDim2.new(0.08, 0, 0.65, 0)
 BaseJoystick.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 BaseJoystick.BackgroundTransparency = 0.4
-BaseJoystick.Active = true
-BaseJoystick.Draggable = true -- Có thể kéo di chuyển Joystick tới chỗ tùy thích
+BaseJoystick.Active = false -- Tắt Active để không cản trở tương tác xung quanh
+BaseJoystick.ZIndex = 5
 BaseJoystick.Parent = ScreenGui
 
 local BaseCorner = Instance.new("UICorner")
 BaseCorner.CornerRadius = UDim2.new(1, 0)
 BaseCorner.Parent = BaseJoystick
 
--- Cần gạt Joystick (Nút tròn nhỏ bên trong)
 local Stick = Instance.new("Frame")
 Stick.Size = UDim2.new(0, 30, 0, 30)
-Stick.Position = UDim2.new(0.5, -15, 0.5, -15) -- Nằm chính giữa Base
+Stick.Position = UDim2.new(0.5, -15, 0.5, -15)
 Stick.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
 Stick.BackgroundTransparency = 0.2
+Stick.Active = false
+Stick.ZIndex = 6
 Stick.Parent = BaseJoystick
 
 local StickCorner = Instance.new("UICorner")
@@ -98,24 +105,21 @@ StickCorner.CornerRadius = UDim2.new(1, 0)
 StickCorner.Parent = Stick
 
 -- ==========================================
--- 2. THU GỌN / MỞ RỘNG
+-- 2. XỬ LÝ SỰ KIỆN NÚT BẤM (DÙNG ACTIVATED)
 -- ==========================================
-MinimizeBtn.MouseButton1Click:Connect(function()
+MinimizeBtn.Activated:Connect(function()
 	SmallBtn.Position = MainFrame.Position
 	MainFrame.Visible = false
 	SmallBtn.Visible = true
 end)
 
-SmallBtn.MouseButton1Click:Connect(function()
+SmallBtn.Activated:Connect(function()
 	MainFrame.Position = SmallBtn.Position
 	SmallBtn.Visible = false
 	MainFrame.Visible = true
 end)
 
--- ==========================================
--- 3. LOGIC TRƯỢT JOYSTICK TỰ ĐỘNG (CHỈ TIẾN TỚI)
--- ==========================================
-AFKToggle.MouseButton1Click:Connect(function()
+AFKToggle.Activated:Connect(function()
 	antiAFKActive = not antiAFKActive
 	if antiAFKActive then
 		AFKToggle.Text = "Anti-AFK: ON"
@@ -123,29 +127,30 @@ AFKToggle.MouseButton1Click:Connect(function()
 	else
 		AFKToggle.Text = "Anti-AFK: OFF"
 		AFKToggle.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-		-- Trả joystick về vị trí giữa
 		Stick.Position = UDim2.new(0.5, -15, 0.5, -15)
 	end
 end)
 
--- Vòng lặp tự kéo Joystick tiến về phía trước rồi thả ra
+-- ==========================================
+-- 3. LOGIC ANTI-AFK TIẾN TỚI
+-- ==========================================
 task.spawn(function()
 	while true do
-		task.wait(40) -- Cứ mỗi 40 giây tự nhúc nhích 1 lần
+		task.wait(40)
 		if antiAFKActive then
 			pcall(function()
 				local character = LocalPlayer.Character
 				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 
-				-- 1. Trượt nút Joystick thẳng lên phía trước
+				-- Đẩy Joystick ảo lên phía trước
 				Stick:TweenPosition(UDim2.new(0.5, -15, 0.05, -15), "Out", "Quad", 0.2, true)
 				if humanoid then
 					humanoid:Move(Vector3.new(0, 0, -1), true)
 				end
 				
-				task.wait(0.5) -- Giữ đẩy lên trong 0.5s
+				task.wait(0.5)
 
-				-- 2. Thả cần Joystick về lại chính giữa (Dừng di chuyển)
+				-- Trả Joystick về giữa
 				Stick:TweenPosition(UDim2.new(0.5, -15, 0.5, -15), "Out", "Quad", 0.2, true)
 				if humanoid then
 					humanoid:Move(Vector3.new(0, 0, 0), true)

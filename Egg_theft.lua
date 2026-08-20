@@ -1,179 +1,106 @@
---// WINDUI FULL HUB (STEAL AN EGG)
+--// FLUENT UI FULL HUB (STEAL AN EGG - REAL JOYSTICK ANTI-AFK)
 
-local WindUI = loadstring(game:HttpGet(
-    "https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"
-))()
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 local Workspace = game:GetService("Workspace")
 
 --------------------------------------------------
--- WINDOW
+-- WINDOW CREATION
 --------------------------------------------------
 
-local Window = WindUI:CreateWindow({
+local Window = Fluent:CreateWindow({
     Title = "Steal an Egg - Super Hub",
-    Icon = "egg",
-    Author = "ftgs",
-    Folder = "MySuperHub",
-
-    Size = UDim2.fromOffset(580, 460),
-    MinSize = Vector2.new(560, 350),
-    MaxSize = Vector2.new(900, 600),
-
-    ToggleKey = Enum.KeyCode.LeftShift,
+    SubTitle = "by ftgs",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 420),
+    Acrylic = true,
     Theme = "Dark",
-    Transparent = true,
-    Resizable = true,
-    SideBarWidth = 200
+    MinimizeKey = Enum.KeyCode.LeftShift
 })
 
 --------------------------------------------------
 -- TABS
 --------------------------------------------------
 
-local Main = Window:Tab({
-    Title = "Main",
-    Icon = "home"
-})
-
-local Player = Window:Tab({
-    Title = "Player",
-    Icon = "user"
-})
-
-local Misc = Window:Tab({
-    Title = "Misc",
-    Icon = "settings"
-})
-
-local Spotify = Window:Tab({
-    Title = "Spotify",
-    Icon = "music"
-})
+local Tabs = {
+    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
+    Player = Window:AddTab({ Title = "Player", Icon = "user" }),
+    Misc = Window:AddTab({ Title = "Misc", Icon = "settings" }),
+    Spotify = Window:AddTab({ Title = "Spotify", Icon = "music" })
+}
 
 --------------------------------------------------
--- JOYSTICK ẢO (ANTI-AFK)
+-- MAIN TAB : TOGGLES
 --------------------------------------------------
 
-local parentGui = (gethui and gethui()) or game:GetService("CoreGui") or LocalPlayer:WaitForChild("PlayerGui")
-
-if parentGui:FindFirstChild("EggAFKJoystick") then
-	parentGui.EggAFKJoystick:Destroy()
-end
-
-local JoyGui = Instance.new("ScreenGui")
-JoyGui.Name = "EggAFKJoystick"
-JoyGui.ResetOnSpawn = false
-JoyGui.DisplayOrder = 999999
-JoyGui.Parent = parentGui
-
-local BaseJoystick = Instance.new("Frame")
-BaseJoystick.Size = UDim2.new(0, 65, 0, 65)
-BaseJoystick.Position = UDim2.new(0.08, 0, 0.68, 0)
-BaseJoystick.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-BaseJoystick.BackgroundTransparency = 0.5
-BaseJoystick.Active = false
-BaseJoystick.Parent = JoyGui
-
-local BaseCorner = Instance.new("UICorner")
-BaseCorner.CornerRadius = UDim2.new(1, 0)
-BaseCorner.Parent = BaseJoystick
-
-local Stick = Instance.new("Frame")
-Stick.Size = UDim2.new(0, 26, 0, 26)
-Stick.Position = UDim2.new(0.5, -13, 0.5, -13)
-Stick.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
-Stick.BackgroundTransparency = 0.2
-Stick.Active = false
-Stick.Parent = BaseJoystick
-
-local StickCorner = Instance.new("UICorner")
-StickCorner.CornerRadius = UDim2.new(1, 0)
-StickCorner.Parent = Stick
-
---------------------------------------------------
--- MAIN : STEAL EGG & ANTI-AFK
---------------------------------------------------
-
-local autoStealActive = false
 local skipPromptActive = false
+local autoStealActive = false
 local antiAFKActive = false
 
-Main:Toggle({
+local SkipToggle = Tabs.Main:AddToggle("SkipHoldToggle", {
     Title = "Instant Steal (Skip Hold)",
-    Value = false,
-    Callback = function(v)
-        skipPromptActive = v
-        if v then
-            for _, prompt in ipairs(Workspace:GetDescendants()) do
-                if prompt:IsA("ProximityPrompt") then
-                    prompt.HoldDuration = 0
-                end
+    Default = false
+})
+
+SkipToggle:OnChanged(function(v)
+    skipPromptActive = v
+    if v then
+        for _, prompt in ipairs(Workspace:GetDescendants()) do
+            if prompt:IsA("ProximityPrompt") then
+                prompt.HoldDuration = 0
             end
         end
-
-        if WindUI.Notify then
-            WindUI:Notify({
-                Title = "Main",
-                Content = v and "Instant Steal Enabled" or "Instant Steal Disabled",
-                Duration = 2
-            })
-        end
     end
-})
+    Fluent:Notify({
+        Title = "Main",
+        Content = v and "Instant Steal Enabled" or "Instant Steal Disabled",
+        Duration = 2
+    })
+end)
 
-Main:Toggle({
+local AutoStealToggle = Tabs.Main:AddToggle("AutoStealToggle", {
     Title = "Auto Steal Nearby Eggs",
-    Value = false,
-    Callback = function(v)
-        autoStealActive = v
-
-        if WindUI.Notify then
-            WindUI:Notify({
-                Title = "Main",
-                Content = v and "Auto Steal Enabled" or "Auto Steal Disabled",
-                Duration = 2
-            })
-        end
-    end
+    Default = false
 })
 
-Main:Toggle({
-    Title = "Anti-AFK (JoyStick)",
-    Value = false,
-    Callback = function(v)
-        antiAFKActive = v
-        if not v then
-            Stick.Position = UDim2.new(0.5, -13, 0.5, -13)
-        end
+AutoStealToggle:OnChanged(function(v)
+    autoStealActive = v
+    Fluent:Notify({
+        Title = "Main",
+        Content = v and "Auto Steal Enabled" or "Auto Steal Disabled",
+        Duration = 2
+    })
+end)
 
-        if WindUI.Notify then
-            WindUI:Notify({
-                Title = "Main",
-                Content = v and "Anti-AFK Enabled" or "Anti-AFK Disabled",
-                Duration = 2
-            })
-        end
-    end
+local AntiAFKToggle = Tabs.Main:AddToggle("AntiAFKToggle", {
+    Title = "Anti-AFK (Roblox Joystick)",
+    Default = false
 })
+
+AntiAFKToggle:OnChanged(function(v)
+    antiAFKActive = v
+    Fluent:Notify({
+        Title = "Main",
+        Content = v and "Anti-AFK Enabled" or "Anti-AFK Disabled",
+        Duration = 2
+    })
+end)
 
 --------------------------------------------------
--- PLAYER : SPEED SLIDER
+-- PLAYER TAB : SPEED SLIDER
 --------------------------------------------------
 
 local targetSpeed = 16
 local currentSpeed = 16
 
-Player:Slider({
+local SpeedSlider = Tabs.Player:AddSlider("SpeedSlider", {
     Title = "WalkSpeed",
-    Step = 1,
-    Value = {
-        Min = 16,
-        Max = 120,
-        Default = 16
-    },
+    Min = 16,
+    Max = 120,
+    Default = 16,
+    Rounding = 0,
     Callback = function(v)
         targetSpeed = v
     end
@@ -182,7 +109,6 @@ Player:Slider({
 game:GetService("RunService").RenderStepped:Connect(function()
     local char = LocalPlayer.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
-
     if hum then
         currentSpeed += (targetSpeed - currentSpeed) * 0.15
         hum.WalkSpeed = currentSpeed
@@ -190,7 +116,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
 end)
 
 --------------------------------------------------
--- MISC : FPS + REJOIN
+-- MISC TAB : FPS & REJOIN
 --------------------------------------------------
 
 local gui = Instance.new("ScreenGui")
@@ -220,15 +146,15 @@ game:GetService("RunService").RenderStepped:Connect(function()
     end
 end)
 
-Misc:Button({
-    Title = "Rejoin",
+Tabs.Misc:AddButton({
+    Title = "Rejoin Server",
     Callback = function()
         game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer)
     end
 })
 
 --------------------------------------------------
--- SPOTIFY : LOCAL MUSIC
+-- SPOTIFY TAB : MUSIC
 --------------------------------------------------
 
 local SoundService = game:GetService("SoundService")
@@ -241,33 +167,31 @@ Music.Volume = 0.5
 
 local MusicEnabled = false
 
-Spotify:Toggle({
-    Title = "Music",
-    Value = false,
-    Callback = function(v)
-        MusicEnabled = v
-        if not v then
-            Music:Stop()
-        end
-    end
+local MusicToggle = Tabs.Spotify:AddToggle("MusicToggle", {
+    Title = "Enable Music",
+    Default = false
 })
 
+MusicToggle:OnChanged(function(v)
+    MusicEnabled = v
+    if not v then
+        Music:Stop()
+    end
+end)
+
 local function AddSong(name, id)
-    Spotify:Button({
+    Tabs.Spotify:AddButton({
         Title = name,
         Callback = function()
             if not MusicEnabled then return end
             Music:Stop()
             Music.SoundId = "rbxassetid://" .. tostring(id)
             Music:Play()
-
-            if WindUI.Notify then
-                WindUI:Notify({
-                    Title = "Spotify",
-                    Content = "Playing: " .. name,
-                    Duration = 2
-                })
-            end
+            Fluent:Notify({
+                Title = "Spotify",
+                Content = "Playing: " .. name,
+                Duration = 2
+            })
         end
     })
 end
@@ -276,10 +200,12 @@ AddSong("Quên Đi Câu Chuyện Khô Gà", 99152674992699)
 AddSong("Đừng Đóng Vai Anh", 133758365650956)
 AddSong("DreamCore 核", 82149511707056)
 
-Spotify:Slider({
+Tabs.Spotify:AddSlider("VolumeSlider", {
     Title = "Volume",
-    Step = 1,
-    Value = { Min = 0, Max = 10, Default = 5 },
+    Min = 0,
+    Max = 10,
+    Default = 5,
+    Rounding = 0,
     Callback = function(v)
         Music.Volume = v / 10
     end
@@ -295,7 +221,7 @@ Workspace.DescendantAdded:Connect(function(descendant)
     end
 end)
 
--- Vòng lặp Auto Steal Egg
+-- Loop Auto Steal Egg
 task.spawn(function()
     while true do
         task.wait(0.2)
@@ -321,23 +247,42 @@ task.spawn(function()
     end
 end)
 
--- Vòng lặp Anti-AFK
+-- Loop Anti-AFK (Kéo Joystick thật của Roblox)
 task.spawn(function()
+    local VirtualInputManager = game:GetService("VirtualInputManager")
+    
     while true do
-        task.wait(40)
+        task.wait(35)
         if antiAFKActive then
             pcall(function()
-                local character = LocalPlayer.Character
-                local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+                local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+                local touchGui = playerGui and playerGui:FindFirstChild("TouchGui")
+                local touchFrame = touchGui and touchGui:FindFirstChild("TouchControlFrame")
+                local dynamicThumbstick = touchFrame and (touchFrame:FindFirstChild("DynamicThumbstickFrame") or touchFrame:FindFirstChild("ThumbstickFrame"))
 
-                Stick:TweenPosition(UDim2.new(0.5, -13, 0.05, -13), "Out", "Quad", 0.2, true)
-                if humanoid then humanoid:Move(Vector3.new(0, 0, -1), true) end
-                
-                task.wait(0.5)
+                if dynamicThumbstick and dynamicThumbstick.AbsoluteSize.X > 0 then
+                    -- Mô phỏng kéo Joystick ảo của Roblox Mobile
+                    local center = dynamicThumbstick.AbsolutePosition + (dynamicThumbstick.AbsoluteSize / 2)
+                    local dragTarget = center - Vector2.new(0, 40)
 
-                Stick:TweenPosition(UDim2.new(0.5, -13, 0.5, -13), "Out", "Quad", 0.2, true)
-                if humanoid then humanoid:Move(Vector3.new(0, 0, 0), true) end
+                    VirtualInputManager:SendTouchEvent(0, 0, center.X, center.Y)
+                    task.wait(0.05)
+                    VirtualInputManager:SendTouchEvent(0, 1, dragTarget.X, dragTarget.Y)
+                    task.wait(0.4)
+                    VirtualInputManager:SendTouchEvent(0, 2, dragTarget.X, dragTarget.Y)
+                else
+                    -- Fallback dành cho PC / Device không xài Touch Controls
+                    local char = LocalPlayer.Character
+                    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+                    if humanoid then
+                        humanoid:Move(Vector3.new(0, 0, -1), true)
+                        task.wait(0.5)
+                        humanoid:Move(Vector3.new(0, 0, 0), true)
+                    end
+                end
             end)
         end
     end
 end)
+
+Window:SelectTab(1)

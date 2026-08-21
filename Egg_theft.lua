@@ -1,4 +1,4 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (KEYLESS TAB SYSTEM)
+--// RAYFIELD - SCRIPT HUB BY FTGS (KEYLESS TAB + TRACK KEY SYSTEM)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Players = game:GetService("Players")
@@ -9,10 +9,12 @@ local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
 --------------------------------------------------
--- CẤU HÌNH KEY & BIẾN GAME
+-- CẤU HÌNH KEY & FILE STORAGE
 --------------------------------------------------
 local currentKey = "21/8/2026-tjjsk"
 local keyUrl = "https://link4sub.com/notes/IqR0"
+local fileName = "FTGSKey_Saved.txt"
+
 local inputKeyText = ""
 local isKeyUnlocked = false
 
@@ -21,6 +23,22 @@ local antiAFKActive = false
 local tweenSpeed = 250
 local safeZoneCFrame = CFrame.new(534.61, 70.27, -366.91, 0.051, 0, -0.999, 0, 1, 0, 0.999, 0, 0.051)
 local safeZoneGui = nil
+
+--------------------------------------------------
+-- HÀM XỬ LÝ FILE KEY
+--------------------------------------------------
+local function GetSavedKey()
+    if isfile and isfile(fileName) then
+        return readfile(fileName)
+    end
+    return nil
+end
+
+local function SaveKeyToStorage(keyToSave)
+    if writefile then
+        writefile(fileName, keyToSave)
+    end
+end
 
 --------------------------------------------------
 -- HÀM TWEEN MƯỢT
@@ -59,226 +77,249 @@ local function SmoothTween(targetCFrame, speed)
 end
 
 --------------------------------------------------
--- WINDOW RAYFIELD (TẮT KEY SYSTEM MẶC ĐỊNH)
+-- WINDOW RAYFIELD
 --------------------------------------------------
 local Window = Rayfield:CreateWindow({
     Name = "FTGS HUB",
     LoadingTitle = "LOADING SYSTEM",
     LoadingSubtitle = "by ftgs",
     ConfigurationSaving = { Enabled = false },
-    KeySystem = false -- Tắt Key System lỗi của Rayfield
+    KeySystem = false
 })
 
 --------------------------------------------------
--- TAB 1: KEY TAB (XỬ LÝ NHẬP KEY TRỰC TIẾP)
+-- HÀM TẠO 3 TAB TÍNH NĂNG (MAIN, FARM, OP)
 --------------------------------------------------
-local KeyTab = Window:CreateTab("Key", 4483362458)
+local function LoadMainTabs()
+    -- TAB MAIN
+    local MainTab = Window:CreateTab("Main", 4483362458)
 
-KeyTab:CreateSection("Hệ Thống Xác Thực Key")
-
--- Ô nhập Key
-KeyTab:CreateInput({
-    Name = "Nhập Key tại đây",
-    PlaceholderText = "Dán mã Key của bạn vào đây...",
-    RemoveTextAfterFocusLost = false,
-    Callback = function(Text)
-        inputKeyText = Text
-    end,
-})
-
--- Nút Check Key (Khai báo trước biến để vô hiệu hóa về sau)
-local CheckKeyButton
-
-CheckKeyButton = KeyTab:CreateButton({
-    Name = "Check Key",
-    Callback = function()
-        if isKeyUnlocked then
-            Rayfield:Notify({
-                Title = "Key System",
-                Content = "Bạn đã nhập đúng Key trước đó rồi!",
-                Duration = 2
-            })
-            return
-        end
-
-        if inputKeyText == currentKey then
-            isKeyUnlocked = true
-            
-            Rayfield:Notify({
-                Title = "Thành Công!",
-                Content = "Key chính xác. Đang tải các Tab tính năng...",
-                Duration = 3
-            })
-
-            -- VÔ HIỆU HÓA / ĐỔI TÊN NÚT CHECK KEY
-            CheckKeyButton:Set("Đã Khóa Key (Đã Xác Thực)")
-
-            --------------------------------------------------
-            -- TẠO 3 TAB: MAIN, FARM, OP KHI CHECK KEY ĐÚNG
-            --------------------------------------------------
-            
-            -- TAB MAIN
-            local MainTab = Window:CreateTab("Main", 4483362458)
-
-            MainTab:CreateToggle({
-                Name = "Skip Prompt (Bỏ qua nhặt ngay lập tức)",
-                CurrentValue = false,
-                Flag = "SkipPrompt",
-                Callback = function(Value)
-                    skipPromptActive = Value
-                    if Value then
-                        for _, prompt in ipairs(Workspace:GetDescendants()) do
-                            if prompt:IsA("ProximityPrompt") then
-                                pcall(function() prompt.HoldDuration = 0 end)
-                            end
-                        end
-                        Rayfield:Notify({ Title = "Skip Prompt", Content = "Đã BẬT", Duration = 2 })
-                    else
-                        Rayfield:Notify({ Title = "Skip Prompt", Content = "Đã TẮT", Duration = 2 })
+    MainTab:CreateToggle({
+        Name = "Skip Prompt (Bỏ qua nhặt ngay lập tức)",
+        CurrentValue = false,
+        Flag = "SkipPrompt",
+        Callback = function(Value)
+            skipPromptActive = Value
+            if Value then
+                for _, prompt in ipairs(Workspace:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") then
+                        pcall(function() prompt.HoldDuration = 0 end)
                     end
-                end,
-            })
+                end
+                Rayfield:Notify({ Title = "Skip Prompt", Content = "Đã BẬT", Duration = 2 })
+            else
+                Rayfield:Notify({ Title = "Skip Prompt", Content = "Đã TẮT", Duration = 2 })
+            end
+        end,
+    })
 
-            MainTab:CreateToggle({
-                Name = "Anti-AFK (Khuyến khích đứng ở máy chạy bộ)",
-                CurrentValue = false,
-                Flag = "AntiAFK",
-                Callback = function(Value)
-                    antiAFKActive = Value
-                    Rayfield:Notify({ Title = "Anti-AFK", Content = Value and "Đã BẬT" or "Đã TẮT", Duration = 2 })
-                end,
-            })
+    MainTab:CreateToggle({
+        Name = "Anti-AFK (Khuyến khích đứng ở máy chạy bộ)",
+        CurrentValue = false,
+        Flag = "AntiAFK",
+        Callback = function(Value)
+            antiAFKActive = Value
+            Rayfield:Notify({ Title = "Anti-AFK", Content = Value and "Đã BẬT" or "Đã TẮT", Duration = 2 })
+        end,
+    })
 
-            -- TAB FARM
-            local FarmTab = Window:CreateTab("Farm", 4483362458)
-            FarmTab:CreateSection("Tính Năng Farm")
+    -- TAB FARM
+    local FarmTab = Window:CreateTab("Farm", 4483362458)
+    FarmTab:CreateSection("Tính Năng Farm")
 
-            FarmTab:CreateSlider({
-                Name = "Tốc độ bay (Tween Speed)",
-                Range = {50, 600},
-                Increment = 10,
-                Suffix = "Studs/s",
-                CurrentValue = 250,
-                Flag = "TweenSpeed",
-                Callback = function(Value)
-                    tweenSpeed = Value
-                end,
-            })
+    FarmTab:CreateSlider({
+        Name = "Tốc độ bay (Tween Speed)",
+        Range = {50, 600},
+        Increment = 10,
+        Suffix = "Studs/s",
+        CurrentValue = 250,
+        Flag = "TweenSpeed",
+        Callback = function(Value)
+            tweenSpeed = Value
+        end,
+    })
 
-            FarmTab:CreateButton({
-                Name = "Safe Zone (Bay về khu vực an toàn)",
-                Callback = function()
-                    Rayfield:Notify({ Title = "Safe Zone", Content = "Đang bay về Safe Zone...", Duration = 2 })
-                    task.spawn(function()
-                        SmoothTween(safeZoneCFrame, tweenSpeed)
+    FarmTab:CreateButton({
+        Name = "Safe Zone (Bay về khu vực an toàn)",
+        Callback = function()
+            Rayfield:Notify({ Title = "Safe Zone", Content = "Đang bay về Safe Zone...", Duration = 2 })
+            task.spawn(function()
+                SmoothTween(safeZoneCFrame, tweenSpeed)
+            end)
+        end,
+    })
+
+    FarmTab:CreateToggle({
+        Name = "Mini Toggle (Nút bay nhanh về Safe Zone)",
+        CurrentValue = false,
+        Flag = "SafeZoneMiniToggle",
+        Callback = function(Value)
+            if Value then
+                if not safeZoneGui then
+                    safeZoneGui = Instance.new("ScreenGui")
+                    safeZoneGui.Name = "SafeZoneMiniBtn"
+                    safeZoneGui.Parent = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
+                    safeZoneGui.ResetOnSpawn = false
+
+                    local SafeBtn = Instance.new("TextButton")
+                    SafeBtn.Name = "SafeBtn"
+                    SafeBtn.Parent = safeZoneGui
+                    SafeBtn.Size = UDim2.new(0, 50, 0, 50)
+                    SafeBtn.Position = UDim2.new(0.05, 0, 0.4, 0)
+                    SafeBtn.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
+                    SafeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    SafeBtn.Text = "SAFE"
+                    SafeBtn.TextSize = 14
+                    SafeBtn.Font = Enum.Font.SourceSansBold
+                    SafeBtn.Active = true
+                    SafeBtn.Draggable = true
+
+                    local UICorner = Instance.new("UICorner")
+                    UICorner.CornerRadius = UDim.new(1, 0)
+                    UICorner.Parent = SafeBtn
+
+                    local UIStroke = Instance.new("UIStroke")
+                    UIStroke.Thickness = 2
+                    UIStroke.Color = Color3.fromRGB(255, 255, 255)
+                    UIStroke.Parent = SafeBtn
+
+                    SafeBtn.MouseButton1Click:Connect(function()
+                        task.spawn(function()
+                            SmoothTween(safeZoneCFrame, tweenSpeed)
+                        end)
                     end)
-                end,
-            })
+                end
+                safeZoneGui.Enabled = true
+                Rayfield:Notify({ Title = "Mini Toggle", Content = "Đã BẬT nút SAFE", Duration = 2 })
+            else
+                if safeZoneGui then
+                    safeZoneGui:Destroy()
+                    safeZoneGui = nil
+                end
+                Rayfield:Notify({ Title = "Mini Toggle", Content = "Đã TẮT nút SAFE", Duration = 2 })
+            end
+        end,
+    })
 
-            FarmTab:CreateToggle({
-                Name = "Mini Toggle (Nút bay nhanh về Safe Zone)",
-                CurrentValue = false,
-                Flag = "SafeZoneMiniToggle",
-                Callback = function(Value)
-                    if Value then
-                        if not safeZoneGui then
-                            safeZoneGui = Instance.new("ScreenGui")
-                            safeZoneGui.Name = "SafeZoneMiniBtn"
-                            safeZoneGui.Parent = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
-                            safeZoneGui.ResetOnSpawn = false
+    -- TAB OP
+    local OPTab = Window:CreateTab("OP", 4483362458)
+    OPTab:CreateButton({
+        Name = "Freeze HP (0 Máu không die)",
+        Callback = function()
+            local char = LocalPlayer.Character
+            local humanoid = char and char:FindFirstChildOfClass("Humanoid")
 
-                            local SafeBtn = Instance.new("TextButton")
-                            SafeBtn.Name = "SafeBtn"
-                            SafeBtn.Parent = safeZoneGui
-                            SafeBtn.Size = UDim2.new(0, 50, 0, 50)
-                            SafeBtn.Position = UDim2.new(0.05, 0, 0.4, 0)
-                            SafeBtn.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
-                            SafeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-                            SafeBtn.Text = "SAFE"
-                            SafeBtn.TextSize = 14
-                            SafeBtn.Font = Enum.Font.SourceSansBold
-                            SafeBtn.Active = true
-                            SafeBtn.Draggable = true
+            if humanoid then
+                humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+                humanoid:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
+                humanoid.Health = 0
 
-                            local UICorner = Instance.new("UICorner")
-                            UICorner.CornerRadius = UDim.new(1, 0)
-                            UICorner.Parent = SafeBtn
+                Rayfield:Notify({
+                    Title = "Freeze HP",
+                    Content = "Đã đóng băng HP về 0 thành công!",
+                    Duration = 2.5
+                })
+            end
+        end,
+    })
+end
 
-                            local UIStroke = Instance.new("UIStroke")
-                            UIStroke.Thickness = 2
-                            UIStroke.Color = Color3.fromRGB(255, 255, 255)
-                            UIStroke.Parent = SafeBtn
+--------------------------------------------------
+-- HÀM TẠO TAB KEY
+--------------------------------------------------
+local function LoadKeyTab()
+    local KeyTab = Window:CreateTab("Key", 4483362458)
 
-                            SafeBtn.MouseButton1Click:Connect(function()
-                                task.spawn(function()
-                                    SmoothTween(safeZoneCFrame, tweenSpeed)
-                                end)
-                            end)
-                        end
-                        safeZoneGui.Enabled = true
-                        Rayfield:Notify({ Title = "Mini Toggle", Content = "Đã BẬT nút SAFE", Duration = 2 })
-                    else
-                        if safeZoneGui then
-                            safeZoneGui:Destroy()
-                            safeZoneGui = nil
-                        end
-                        Rayfield:Notify({ Title = "Mini Toggle", Content = "Đã TẮT nút SAFE", Duration = 2 })
-                    end
-                end,
-            })
+    KeyTab:CreateSection("Hệ Thống Xác Thực Key")
 
-            -- TAB OP
-            local OPTab = Window:CreateTab("OP", 4483362458)
-            OPTab:CreateButton({
-                Name = "Freeze HP (0 Máu không die)",
-                Callback = function()
-                    local char = LocalPlayer.Character
-                    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+    KeyTab:CreateInput({
+        Name = "Nhập Key tại đây",
+        PlaceholderText = "Dán mã Key của bạn vào đây...",
+        RemoveTextAfterFocusLost = false,
+        Callback = function(Text)
+            inputKeyText = Text
+        end,
+    })
 
-                    if humanoid then
-                        humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-                        humanoid:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
-                        humanoid.Health = 0
+    local CheckKeyButton
+    CheckKeyButton = KeyTab:CreateButton({
+        Name = "Check Key",
+        Callback = function()
+            if isKeyUnlocked then
+                Rayfield:Notify({ Title = "Key System", Content = "Key đã được kích hoạt!", Duration = 2 })
+                return
+            end
 
-                        Rayfield:Notify({
-                            Title = "Freeze HP",
-                            Content = "Đã đóng băng HP về 0 thành công!",
-                            Duration = 2.5
-                        })
-                    end
-                end,
-            })
+            if inputKeyText == currentKey then
+                isKeyUnlocked = true
+                SaveKeyToStorage(currentKey)
+                
+                Rayfield:Notify({
+                    Title = "Thành Công!",
+                    Content = "Key chính xác 🎉 Đã lưu Key!",
+                    Duration = 3
+                })
 
+                CheckKeyButton:Set("Đã Xác Thực (Đã Lưu Key)")
+                LoadMainTabs()
+            else
+                Rayfield:Notify({
+                    Title = "Thất Bại!",
+                    Content = "Key không chính xác, vui lòng thử lại!",
+                    Duration = 2.5
+                })
+            end
+        end,
+    })
+
+    KeyTab:CreateButton({
+        Name = "Get Key (Copy Link)",
+        Callback = function()
+            if setclipboard then
+                setclipboard(keyUrl)
+                Rayfield:Notify({
+                    Title = "Get Key",
+                    Content = "Đã sao chép Link lấy Key!",
+                    Duration = 3
+                })
+            end
+        end,
+    })
+end
+
+--------------------------------------------------
+-- LOGIC TRACK KEY ĐẾM NGƯỢC
+--------------------------------------------------
+task.spawn(function()
+    local savedKey = GetSavedKey()
+
+    if savedKey then
+        -- Đếm ngược Track Key
+        Rayfield:Notify({ Title = "System", Content = "Đang Track Key 3..", Duration = 0.8 })
+        task.wait(1)
+        Rayfield:Notify({ Title = "System", Content = "Đang Track Key 2..", Duration = 0.8 })
+        task.wait(1)
+        Rayfield:Notify({ Title = "System", Content = "Đang Track Key 1..", Duration = 0.8 })
+        task.wait(1)
+
+        -- Kiểm tra trùng khớp
+        if savedKey == currentKey then
+            isKeyUnlocked = true
+            Rayfield:Notify({ Title = "System", Content = "Key Hợp Lệ 🎉", Duration = 3 })
+            LoadMainTabs()
         else
-            Rayfield:Notify({
-                Title = "Thất Bại!",
-                Content = "Key không chính xác, vui lòng thử lại!",
-                Duration = 2.5
-            })
+            Rayfield:Notify({ Title = "System", Content = "Key Đã Cập Nhật Hãy Get Key Mới 💫", Duration = 4 })
+            LoadKeyTab()
         end
-    end,
-})
-
--- Nút Get Key
-KeyTab:CreateButton({
-    Name = "Get Key (Copy Link)",
-    Callback = function()
-        if setclipboard then
-            setclipboard(keyUrl)
-            Rayfield:Notify({
-                Title = "Get Key",
-                Content = "Đã sao chép Link lấy Key vào bộ nhớ tạm!",
-                Duration = 3
-            })
-        end
-    end,
-})
+    else
+        -- Lần đầu chạy chưa từng lưu Key
+        LoadKeyTab()
+    end
+end)
 
 --------------------------------------------------
--- NOTIFICATION CẢM ƠN & LOGIC HỆ THỐNG
+-- LOGIC PHỤ (PROXIMITY PROMPT & ANTI-AFK)
 --------------------------------------------------
-Rayfield:Notify({ Title = "FTGS HUB", Content = "Thank you using 🔥", Duration = 5 })
-
 Workspace.DescendantAdded:Connect(function(descendant)
     if skipPromptActive and descendant:IsA("ProximityPrompt") then
         pcall(function() descendant.HoldDuration = 0 end)

@@ -1,4 +1,4 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (HIDE CLIENT RENDERED ASSETS ONLY)
+--// RAYFIELD - SCRIPT HUB BY FTGS (FULL + TAB AREA & MINI TWEEN BUTTONS)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Players = game:GetService("Players")
@@ -24,7 +24,15 @@ local tweenSpeed = 250
 local safeZoneCFrame = CFrame.new(534.61, 70.27, -366.91, 0.051, 0, -0.999, 0, 1, 0, 0.999, 0, 0.051)
 local safeZoneGui = nil
 
--- BIẾN CHO TÍNH NĂNG ẨN PET (ClientRenderedAssets)
+-- QUẢN LÝ DỮ LIỆU TỌA ĐỘ AREA
+local areaCFrames = {
+    Cosmic = CFrame.new(3392.59, 70.27, -337.56, -1.000, 0.000, 0.018, 0.000, 1.000, 0.000, -0.018, 0.000, -1.000),
+    Prehistoric = CFrame.new(2813.55, 70.27, -381.25, 1.000, 0.000, 0.024, -0.000, 1.000, -0.000, -0.024, 0.000, 1.000),
+    Ocean = CFrame.new(2280.64, 70.27, -343.30, -1.000, 0.000, -0.009, 0.000, 1.000, 0.000, 0.009, 0.000, -1.000),
+    Volcano = CFrame.new(1878.76, 70.27, -381.89, 1.000, -0.000, 0.002, 0.000, 1.000, -0.000, -0.002, 0.000, 1.000)
+}
+
+local areaGuis = {}
 local hiddenAssetsFolder = nil
 
 --------------------------------------------------
@@ -80,6 +88,59 @@ local function SmoothTween(targetCFrame, speed)
 end
 
 --------------------------------------------------
+-- HÀM TẠO NÚT MINI DỜI VỊ TRÍ TỰ ĐỘNG
+--------------------------------------------------
+local function CreateMiniAreaButton(areaName, targetCFrame, bgColor, posOffset)
+    if areaGuis[areaName] then
+        areaGuis[areaName]:Destroy()
+        areaGuis[areaName] = nil
+    end
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "MiniBtn_" .. areaName
+    gui.Parent = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
+    gui.ResetOnSpawn = false
+
+    local btn = Instance.new("TextButton")
+    btn.Name = "Btn"
+    btn.Parent = gui
+    btn.Size = UDim2.new(0, 75, 0, 35)
+    btn.Position = UDim2.new(0.05, 0, 0.45 + posOffset, 0)
+    btn.BackgroundColor3 = bgColor
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Text = areaName
+    btn.TextSize = 13
+    btn.Font = Enum.Font.SourceSansBold
+    btn.Active = true
+    btn.Draggable = true
+
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 8)
+    UICorner.Parent = btn
+
+    local UIStroke = Instance.new("UIStroke")
+    UIStroke.Thickness = 2
+    UIStroke.Color = Color3.fromRGB(255, 255, 255)
+    UIStroke.Parent = btn
+
+    btn.MouseButton1Click:Connect(function()
+        Rayfield:Notify({ Title = "Teleport", Content = "Đang Tween tới " .. areaName .. "...", Duration = 1.5 })
+        task.spawn(function()
+            SmoothTween(targetCFrame, tweenSpeed)
+        end)
+    end)
+
+    areaGuis[areaName] = gui
+end
+
+local function RemoveMiniAreaButton(areaName)
+    if areaGuis[areaName] then
+        areaGuis[areaName]:Destroy()
+        areaGuis[areaName] = nil
+    end
+end
+
+--------------------------------------------------
 -- WINDOW RAYFIELD
 --------------------------------------------------
 local Window = Rayfield:CreateWindow({
@@ -91,7 +152,7 @@ local Window = Rayfield:CreateWindow({
 })
 
 --------------------------------------------------
--- HÀM TẠO CÁC TAB TÍNH NĂNG (MAIN, FARM, OP, MISC)
+-- HÀM TẠO CÁC TAB TÍNH NĂNG (MAIN, FARM, AREA, OP, MISC)
 --------------------------------------------------
 local function LoadMainTabs()
     -- TAB MAIN
@@ -158,7 +219,7 @@ local function LoadMainTabs()
                     SafeBtn.Name = "SafeBtn"
                     SafeBtn.Parent = safeZoneGui
                     SafeBtn.Size = UDim2.new(0, 50, 0, 50)
-                    SafeBtn.Position = UDim2.new(0.05, 0, 0.4, 0)
+                    SafeBtn.Position = UDim2.new(0.05, 0, 0.33, 0)
                     SafeBtn.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
                     SafeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
                     SafeBtn.Text = "SAFE"
@@ -194,6 +255,74 @@ local function LoadMainTabs()
         end,
     })
 
+    -- TAB AREA (KẾ BÊN FARM)
+    local AreaTab = Window:CreateTab("Area", 4483362458)
+    AreaTab:CreateSection("Nút Bay Nhanh Khu Vực (Mini Toggle)")
+
+    -- 1. Cosmic (Màu Tím)
+    AreaTab:CreateToggle({
+        Name = "Cosmic Mini Toggle",
+        CurrentValue = false,
+        Flag = "CosmicMini",
+        Callback = function(Value)
+            if Value then
+                CreateMiniAreaButton("Cosmic", areaCFrames.Cosmic, Color3.fromRGB(138, 43, 226), 0.00)
+                Rayfield:Notify({ Title = "Area", Content = "Đã BẬT Mini Btn: Cosmic", Duration = 1.5 })
+            else
+                RemoveMiniAreaButton("Cosmic")
+                Rayfield:Notify({ Title = "Area", Content = "Đã TẮT Mini Btn: Cosmic", Duration = 1.5 })
+            end
+        end,
+    })
+
+    -- 2. Prehistoric (Màu Xanh Lá Hơi Đậm)
+    AreaTab:CreateToggle({
+        Name = "Prehistoric Mini Toggle",
+        CurrentValue = false,
+        Flag = "PrehistoricMini",
+        Callback = function(Value)
+            if Value then
+                CreateMiniAreaButton("Prehistoric", areaCFrames.Prehistoric, Color3.fromRGB(34, 139, 34), 0.06)
+                Rayfield:Notify({ Title = "Area", Content = "Đã BẬT Mini Btn: Prehistoric", Duration = 1.5 })
+            else
+                RemoveMiniAreaButton("Prehistoric")
+                Rayfield:Notify({ Title = "Area", Content = "Đã TẮT Mini Btn: Prehistoric", Duration = 1.5 })
+            end
+        end,
+    })
+
+    -- 3. Volcano (Màu Đỏ Cam Núi Lửa)
+    AreaTab:CreateToggle({
+        Name = "Volcano Mini Toggle",
+        CurrentValue = false,
+        Flag = "VolcanoMini",
+        Callback = function(Value)
+            if Value then
+                CreateMiniAreaButton("Volcano", areaCFrames.Volcano, Color3.fromRGB(225, 68, 0), 0.12)
+                Rayfield:Notify({ Title = "Area", Content = "Đã BẬT Mini Btn: Volcano", Duration = 1.5 })
+            else
+                RemoveMiniAreaButton("Volcano")
+                Rayfield:Notify({ Title = "Area", Content = "Đã TẮT Mini Btn: Volcano", Duration = 1.5 })
+            end
+        end,
+    })
+
+    -- 4. Ocean (Màu Đại Dương)
+    AreaTab:CreateToggle({
+        Name = "Ocean Mini Toggle",
+        CurrentValue = false,
+        Flag = "OceanMini",
+        Callback = function(Value)
+            if Value then
+                CreateMiniAreaButton("Ocean", areaCFrames.Ocean, Color3.fromRGB(0, 119, 182), 0.18)
+                Rayfield:Notify({ Title = "Area", Content = "Đã BẬT Mini Btn: Ocean", Duration = 1.5 })
+            else
+                RemoveMiniAreaButton("Ocean")
+                Rayfield:Notify({ Title = "Area", Content = "Đã TẮT Mini Btn: Ocean", Duration = 1.5 })
+            end
+        end,
+    })
+
     -- TAB OP
     local OPTab = Window:CreateTab("OP", 4483362458)
     OPTab:CreateButton({
@@ -220,7 +349,6 @@ local function LoadMainTabs()
     local MiscTab = Window:CreateTab("Misc", 4483362458)
     MiscTab:CreateSection("Tính Năng Khác")
 
-    -- Anti-AFK
     MiscTab:CreateToggle({
         Name = "Anti-AFK (Khuyến khích đứng ở máy chạy bộ)",
         CurrentValue = false,
@@ -231,7 +359,6 @@ local function LoadMainTabs()
         end,
     })
 
-    -- Ẩn toàn bộ Pet (ClientRenderedAssets)
     MiscTab:CreateToggle({
         Name = "Ẩn Toàn bộ Pet",
         CurrentValue = false,
@@ -327,31 +454,24 @@ task.spawn(function()
     local savedKey = GetSavedKey()
 
     if savedKey then
-        -- Track 3.. (Mất 900ms -> Nghỉ 200ms)
         Rayfield:Notify({ Title = "System", Content = "Đang Track Key 3..", Duration = 0.9 })
         task.wait(1.1)
 
-        -- Track 2.. (Mất 900ms -> Nghỉ 200ms)
         Rayfield:Notify({ Title = "System", Content = "Đang Track Key 2..", Duration = 0.9 })
         task.wait(1.1)
 
-        -- Track 1.. (Mất 900ms -> Nghỉ 200ms)
         Rayfield:Notify({ Title = "System", Content = "Đang Track Key 1..", Duration = 0.9 })
         task.wait(1.1)
 
-        -- Kiểm tra trùng khớp Key
         if savedKey == currentKey then
             isKeyUnlocked = true
-            -- Key Hợp Lệ 🎉 (Mất sau 3000ms)
             Rayfield:Notify({ Title = "System", Content = "Key Hợp Lệ 🎉", Duration = 3.0 })
             LoadMainTabs()
         else
-            -- Key Đã Cập Nhật (Mất sau 2500ms) -> Nhả Tab Key
             Rayfield:Notify({ Title = "System", Content = "Key Đã Cập Nhật Hãy Get Key Mới 💫", Duration = 2.5 })
             LoadKeyTab()
         end
     else
-        -- Lần đầu chạy chưa từng lưu Key -> Hiện Tab Key ngay
         LoadKeyTab()
     end
 end)

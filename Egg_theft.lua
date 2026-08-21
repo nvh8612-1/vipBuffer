@@ -1,4 +1,4 @@
---// RAYFIELD - FULL SCRIPT HUB BY FTGS
+--// RAYFIELD - SCRIPT HUB BY FTGS (KEYLESS IN FARM TAB)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Players = game:GetService("Players")
@@ -11,6 +11,10 @@ local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 --------------------------------------------------
 -- CẤU HÌNH BIẾN
 --------------------------------------------------
+local userEnteredKey = ""
+local targetKey = "21/8/2026-tjjsk" -- Key chính thức
+local keyUrl = "https://link4sub.com/notes/IqR0" -- Link Get Key
+
 local skipPromptActive = false
 local antiAFKActive = false
 local tweenSpeed = 250
@@ -43,7 +47,6 @@ local function SmoothTween(targetCFrame, speed)
         local elapsed = os.clock() - startTime
         local alpha = math.clamp(elapsed / duration, 0, 1)
 
-        -- Smooth Lerp CFrame
         hrp.CFrame = startCFrame:Lerp(targetCFrame, alpha)
         hrp.AssemblyLinearVelocity = Vector3.zero
         hrp.AssemblyAngularVelocity = Vector3.zero
@@ -100,9 +103,69 @@ MainTab:CreateToggle({
 })
 
 --------------------------------------------------
--- TAB 2: FARM
+-- TAB 2: FARM (CHỨA HỆ THỐNG KEYLESS & TÍNH NĂNG FARM)
 --------------------------------------------------
 local FarmTab = Window:CreateTab("Farm", 4483362458)
+
+-- HỆ THỐNG KEYLESS TẠI TAB FARM
+FarmTab:CreateSection("Hệ Thống Keyless")
+
+FarmTab:CreateInput({
+    Name = "Nhập Key Tại Đây",
+    PlaceholderText = "____",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Text)
+        userEnteredKey = Text
+    end,
+})
+
+FarmTab:CreateButton({
+    Name = "Check Key",
+    Callback = function()
+        if userEnteredKey == targetKey then
+            Rayfield:Notify({
+                Title = "Hệ Thống Keyless",
+                Content = "Nhập Key Thành Công....",
+                Duration = 3
+            })
+        else
+            Rayfield:Notify({
+                Title = "Hệ Thống Keyless",
+                Content = "Sai Key Hãy Thử Lại Sau...",
+                Duration = 3
+            })
+        end
+    end,
+})
+
+FarmTab:CreateButton({
+    Name = "Get Key Tại Đây",
+    Callback = function()
+        if setclipboard then
+            setclipboard(keyUrl)
+            Rayfield:Notify({
+                Title = "Get Key",
+                Content = "Đã sao chép Link lấy Key vào khay nhớ tạm!",
+                Duration = 3
+            })
+        else
+            Rayfield:Notify({
+                Title = "Get Key",
+                Content = "Link lấy key: " .. keyUrl,
+                Duration = 5
+            })
+        end
+    end,
+})
+
+-- CHÚ THÍCH HƯỚNG DẪN KEYLESS
+FarmTab:CreateParagraph({
+    Title = "--Hãy Lấy key Để sử dụng--",
+    Content = "`-Key sẽ reset mỗi 12h/day-`"
+})
+
+-- TÍNH NĂNG FARM & TWEEN
+FarmTab:CreateSection("Tính Năng Farm")
 
 FarmTab:CreateSlider({
     Name = "Tốc độ bay (Tween Speed)",
@@ -204,16 +267,23 @@ OPTab:CreateButton({
 })
 
 --------------------------------------------------
+-- NOTIFICATION CẢM ƠN KHI MỞ SCRIPT
+--------------------------------------------------
+Rayfield:Notify({
+    Title = "FTGS HUB",
+    Content = "Thank you using 🔥",
+    Duration = 5
+})
+
+--------------------------------------------------
 -- LOGIC PHỤ
 --------------------------------------------------
--- Skip Prompt
 Workspace.DescendantAdded:Connect(function(descendant)
     if skipPromptActive and descendant:IsA("ProximityPrompt") then
         pcall(function() descendant.HoldDuration = 0 end)
     end
 end)
 
--- Anti-AFK (MoveVector 30 giây / lần + Thông báo)
 task.spawn(function()
     while true do
         task.wait(30)

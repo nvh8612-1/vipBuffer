@@ -1,4 +1,4 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (DESTROY KEYLESS UI VIA TAB REBUILD)
+--// RAYFIELD - SCRIPT HUB BY FTGS (OFFICIAL KEY SYSTEM)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Players = game:GetService("Players")
@@ -11,10 +11,6 @@ local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 --------------------------------------------------
 -- CẤU HÌNH BIẾN
 --------------------------------------------------
-local userEnteredKey = ""
-local targetKey = "21/8/2026-tjjsk" -- Key chính thức
-local keyUrl = "https://link4sub.com/notes/IqR0" -- Link Get Key
-
 local skipPromptActive = false
 local antiAFKActive = false
 local tweenSpeed = 250
@@ -58,14 +54,23 @@ local function SmoothTween(targetCFrame, speed)
 end
 
 --------------------------------------------------
--- WINDOW RAYFIELD
+-- WINDOW RAYFIELD tích hợp KEY SYSTEM CHÍNH THỨC
 --------------------------------------------------
 local Window = Rayfield:CreateWindow({
     Name = "FTGS HUB",
     LoadingTitle = "LOADING SYSTEM",
     LoadingSubtitle = "by ftgs",
     ConfigurationSaving = { Enabled = false },
-    KeySystem = false
+    KeySystem = true, -- BẬT HỆ THỐNG KEY
+    KeySettings = {
+        Title = "FTGS HUB | Key System",
+        Subtitle = "Hãy lấy key để sử dụng (Reset 12h/day)",
+        Note = "Nhập Key bên dưới hoặc bấm sao chép Link lấy Key",
+        FileName = "FTGSKey", 
+        SaveKey = false, 
+        GrabKeyFromSite = false,
+        Key = {"21/8/2026-tjjsk"} -- KEY CHÍNH THỨC
+    }
 })
 
 --------------------------------------------------
@@ -103,151 +108,84 @@ MainTab:CreateToggle({
 })
 
 --------------------------------------------------
--- TAB 2: FARM (XỬ LÝ KHÓA VÀ XÓA GIAO DIỆN KEYLESS)
+-- TAB 2: FARM (SẠCH SẼ - CHỈ CÓ TÍNH NĂNG FARM)
 --------------------------------------------------
 local FarmTab = Window:CreateTab("Farm", 4483362458)
 
-local function LoadFarmFeatures()
-    -- XÓA TAB FARM CŨ CHỨA KEYLESS
-    pcall(function()
-        if FarmTab then FarmTab:Destroy() end
-    end)
+FarmTab:CreateSection("Tính Năng Farm")
 
-    -- TẠO LẠI TAB FARM MỚI SẠCH SẼ
-    local UnlockedFarmTab = Window:CreateTab("Farm", 4483362458)
-    UnlockedFarmTab:CreateSection("Tính Năng Farm")
+FarmTab:CreateSlider({
+    Name = "Tốc độ bay (Tween Speed)",
+    Range = {50, 600},
+    Increment = 10,
+    Suffix = "Studs/s",
+    CurrentValue = 250,
+    Flag = "TweenSpeed",
+    Callback = function(Value)
+        tweenSpeed = Value
+    end,
+})
 
-    UnlockedFarmTab:CreateSlider({
-        Name = "Tốc độ bay (Tween Speed)",
-        Range = {50, 600},
-        Increment = 10,
-        Suffix = "Studs/s",
-        CurrentValue = 250,
-        Flag = "TweenSpeed",
-        Callback = function(Value)
-            tweenSpeed = Value
-        end,
-    })
+FarmTab:CreateButton({
+    Name = "Safe Zone (Bay về khu vực an toàn)",
+    Callback = function()
+        Rayfield:Notify({ Title = "Safe Zone", Content = "Đang bay về Safe Zone...", Duration = 2 })
+        task.spawn(function()
+            SmoothTween(safeZoneCFrame, tweenSpeed)
+        end)
+    end,
+})
 
-    UnlockedFarmTab:CreateButton({
-        Name = "Safe Zone (Bay về khu vực an toàn)",
-        Callback = function()
-            Rayfield:Notify({ Title = "Safe Zone", Content = "Đang bay về Safe Zone...", Duration = 2 })
-            task.spawn(function()
-                SmoothTween(safeZoneCFrame, tweenSpeed)
-            end)
-        end,
-    })
+FarmTab:CreateToggle({
+    Name = "Mini Toggle (Nút bay nhanh về Safe Zone)",
+    CurrentValue = false,
+    Flag = "SafeZoneMiniToggle",
+    Callback = function(Value)
+        if Value then
+            if not safeZoneGui then
+                safeZoneGui = Instance.new("ScreenGui")
+                safeZoneGui.Name = "SafeZoneMiniBtn"
+                safeZoneGui.Parent = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
+                safeZoneGui.ResetOnSpawn = false
 
-    UnlockedFarmTab:CreateToggle({
-        Name = "Mini Toggle (Nút bay nhanh về Safe Zone)",
-        CurrentValue = false,
-        Flag = "SafeZoneMiniToggle",
-        Callback = function(Value)
-            if Value then
-                if not safeZoneGui then
-                    safeZoneGui = Instance.new("ScreenGui")
-                    safeZoneGui.Name = "SafeZoneMiniBtn"
-                    safeZoneGui.Parent = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
-                    safeZoneGui.ResetOnSpawn = false
+                local SafeBtn = Instance.new("TextButton")
+                SafeBtn.Name = "SafeBtn"
+                SafeBtn.Parent = safeZoneGui
+                SafeBtn.Size = UDim2.new(0, 50, 0, 50)
+                SafeBtn.Position = UDim2.new(0.05, 0, 0.4, 0)
+                SafeBtn.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
+                SafeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                SafeBtn.Text = "SAFE"
+                SafeBtn.TextSize = 14
+                SafeBtn.Font = Enum.Font.SourceSansBold
+                SafeBtn.Active = true
+                SafeBtn.Draggable = true
 
-                    local SafeBtn = Instance.new("TextButton")
-                    SafeBtn.Name = "SafeBtn"
-                    SafeBtn.Parent = safeZoneGui
-                    SafeBtn.Size = UDim2.new(0, 50, 0, 50)
-                    SafeBtn.Position = UDim2.new(0.05, 0, 0.4, 0)
-                    SafeBtn.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
-                    SafeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    SafeBtn.Text = "SAFE"
-                    SafeBtn.TextSize = 14
-                    SafeBtn.Font = Enum.Font.SourceSansBold
-                    SafeBtn.Active = true
-                    SafeBtn.Draggable = true
+                local UICorner = Instance.new("UICorner")
+                UICorner.CornerRadius = UDim.new(1, 0)
+                UICorner.Parent = SafeBtn
 
-                    local UICorner = Instance.new("UICorner")
-                    UICorner.CornerRadius = UDim.new(1, 0)
-                    UICorner.Parent = SafeBtn
+                local UIStroke = Instance.new("UIStroke")
+                UIStroke.Thickness = 2
+                UIStroke.Color = Color3.fromRGB(255, 255, 255)
+                UIStroke.Parent = SafeBtn
 
-                    local UIStroke = Instance.new("UIStroke")
-                    UIStroke.Thickness = 2
-                    UIStroke.Color = Color3.fromRGB(255, 255, 255)
-                    UIStroke.Parent = SafeBtn
-
-                    SafeBtn.MouseButton1Click:Connect(function()
-                        task.spawn(function()
-                            SmoothTween(safeZoneCFrame, tweenSpeed)
-                        end)
+                SafeBtn.MouseButton1Click:Connect(function()
+                    task.spawn(function()
+                        SmoothTween(safeZoneCFrame, tweenSpeed)
                     end)
-                end
-                safeZoneGui.Enabled = true
-                Rayfield:Notify({ Title = "Mini Toggle", Content = "Đã BẬT nút SAFE", Duration = 2 })
-            else
-                if safeZoneGui then
-                    safeZoneGui:Destroy()
-                    safeZoneGui = nil
-                end
-                Rayfield:Notify({ Title = "Mini Toggle", Content = "Đã TẮT nút SAFE", Duration = 2 })
+                end)
             end
-        end,
-    })
-end
-
--- TẠO KHUNG KEYLESS BAN ĐẦU
-FarmTab:CreateSection("Hệ Thống Keyless")
-
-FarmTab:CreateInput({
-    Name = "Nhập Key Tại Đây",
-    PlaceholderText = "____",
-    RemoveTextAfterFocusLost = false,
-    Callback = function(Text)
-        userEnteredKey = Text
-    end,
-})
-
-FarmTab:CreateButton({
-    Name = "Check Key",
-    Callback = function()
-        if userEnteredKey == targetKey then
-            Rayfield:Notify({
-                Title = "Hệ Thống Keyless",
-                Content = "Nhập Key Thành Công....",
-                Duration = 3
-            })
-            -- NHẬP ĐÚNG KEY: XÓA GIAO DIỆN KEYLESS VÀ NÂNG CẤP TAB FARM
-            LoadFarmFeatures()
+            safeZoneGui.Enabled = true
+            Rayfield:Notify({ Title = "Mini Toggle", Content = "Đã BẬT nút SAFE", Duration = 2 })
         else
-            Rayfield:Notify({
-                Title = "Hệ Thống Keyless",
-                Content = "Sai Key Hãy Thử Lại Sau...",
-                Duration = 3
-            })
+            if safeZoneGui then
+                safeZoneGui:Destroy()
+                safeZoneGui = nil
+            end
+            Rayfield:Notify({ Title = "Mini Toggle", Content = "Đã TẮT nút SAFE", Duration = 2 })
         end
     end,
-})
-
-FarmTab:CreateButton({
-    Name = "Get Key Tại Đây",
-    Callback = function()
-        if setclipboard then
-            setclipboard(keyUrl)
-            Rayfield:Notify({
-                Title = "Get Key",
-                Content = "Đã sao chép Link lấy Key vào khay nhớ tạm!",
-                Duration = 3
-            })
-        else
-            Rayfield:Notify({
-                Title = "Get Key",
-                Content = "Link lấy key: " .. keyUrl,
-                Duration = 5
-            })
-        end
-    end,
-})
-
-FarmTab:CreateParagraph({
-    Title = "--Hãy Lấy key Để sử dụng--",
-    Content = "`-Key sẽ reset mỗi 12h/day-`"
 })
 
 --------------------------------------------------
@@ -276,7 +214,7 @@ OPTab:CreateButton({
 })
 
 --------------------------------------------------
--- NOTIFICATION THÔNG BÁO
+-- NOTIFICATION CẢM ƠN
 --------------------------------------------------
 Rayfield:Notify({
     Title = "FTGS HUB",

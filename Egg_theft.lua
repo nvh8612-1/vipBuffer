@@ -1,4 +1,4 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (OFFICIAL KEY SYSTEM)
+--// RAYFIELD - SCRIPT HUB BY FTGS (AUTO KEY CONFIG)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Players = game:GetService("Players")
@@ -9,7 +9,13 @@ local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
 --------------------------------------------------
--- CẤU HÌNH BIẾN
+-- CẤU HÌNH KEY (ĐỔI KEY TẠI ĐÂY LÀ FILENAME TỰ ĐỔI THEO)
+--------------------------------------------------
+local currentKey = "21/8/2026-tjjsk" -- Key giữ nguyên như cũ
+local keyUrl = "https://link4sub.com/notes/IqR0"
+
+--------------------------------------------------
+-- CẤU HÌNH BIẾN GAME
 --------------------------------------------------
 local skipPromptActive = false
 local antiAFKActive = false
@@ -54,22 +60,38 @@ local function SmoothTween(targetCFrame, speed)
 end
 
 --------------------------------------------------
--- WINDOW RAYFIELD tích hợp KEY SYSTEM CHÍNH THỨC
+-- WINDOW RAYFIELD TÍCH HỢP KEY SYSTEM
 --------------------------------------------------
 local Window = Rayfield:CreateWindow({
     Name = "FTGS HUB",
     LoadingTitle = "LOADING SYSTEM",
     LoadingSubtitle = "by ftgs",
     ConfigurationSaving = { Enabled = false },
-    KeySystem = true, -- BẬT HỆ THỐNG KEY
+    KeySystem = true,
     KeySettings = {
         Title = "FTGS HUB | Key System",
         Subtitle = "Hãy lấy key để sử dụng (Reset 12h/day)",
-        Note = "Nhập Key bên dưới hoặc bấm sao chép Link lấy Key",
-        FileName = "FTGSKey", 
-        SaveKey = false, 
+        Note = "",
+        FileName = "FTGSKey_" .. currentKey, -- Tự động gán tên File theo tên Key!
+        SaveKey = true,                       -- Tự động bỏ qua bước nhập nếu đã nhập Key trước đó
         GrabKeyFromSite = false,
-        Key = {"21/8/2026-tjjsk"} -- KEY CHÍNH THỨC
+        Key = {currentKey},
+        KeyLink = keyUrl,
+        Actions = {
+            {
+                Text = "Get Key",
+                OnPressed = function()
+                    if setclipboard then
+                        setclipboard(keyUrl)
+                        Rayfield:Notify({
+                            Title = "Get Key",
+                            Content = "Đã sao chép Link lấy Key!",
+                            Duration = 3
+                        })
+                    end
+                end
+            }
+        }
     }
 })
 
@@ -108,7 +130,7 @@ MainTab:CreateToggle({
 })
 
 --------------------------------------------------
--- TAB 2: FARM (SẠCH SẼ - CHỈ CÓ TÍNH NĂNG FARM)
+-- TAB 2: FARM
 --------------------------------------------------
 local FarmTab = Window:CreateTab("Farm", 4483362458)
 

@@ -1,4 +1,4 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (FULL KEYLESS SYSTEM + TIMED TRACK KEY)
+--// RAYFIELD - SCRIPT HUB BY FTGS (HIDE CLIENT RENDERED ASSETS ONLY)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Players = game:GetService("Players")
@@ -23,6 +23,9 @@ local antiAFKActive = false
 local tweenSpeed = 250
 local safeZoneCFrame = CFrame.new(534.61, 70.27, -366.91, 0.051, 0, -0.999, 0, 1, 0, 0.999, 0, 0.051)
 local safeZoneGui = nil
+
+-- BIẾN CHO TÍNH NĂNG ẨN PET (ClientRenderedAssets)
+local hiddenAssetsFolder = nil
 
 --------------------------------------------------
 -- HÀM XỬ LÝ FILE KEY
@@ -88,7 +91,7 @@ local Window = Rayfield:CreateWindow({
 })
 
 --------------------------------------------------
--- HÀM TẠO 3 TAB TÍNH NĂNG (MAIN, FARM, OP)
+-- HÀM TẠO CÁC TAB TÍNH NĂNG (MAIN, FARM, OP, MISC)
 --------------------------------------------------
 local function LoadMainTabs()
     -- TAB MAIN
@@ -110,16 +113,6 @@ local function LoadMainTabs()
             else
                 Rayfield:Notify({ Title = "Skip Prompt", Content = "Đã TẮT", Duration = 2 })
             end
-        end,
-    })
-
-    MainTab:CreateToggle({
-        Name = "Anti-AFK (Khuyến khích đứng ở máy chạy bộ)",
-        CurrentValue = false,
-        Flag = "AntiAFK",
-        Callback = function(Value)
-            antiAFKActive = Value
-            Rayfield:Notify({ Title = "Anti-AFK", Content = Value and "Đã BẬT" or "Đã TẮT", Duration = 2 })
         end,
     })
 
@@ -219,6 +212,46 @@ local function LoadMainTabs()
                     Content = "Đã đóng băng HP về 0 thành công!",
                     Duration = 2.5
                 })
+            end
+        end,
+    })
+
+    -- TAB MISC
+    local MiscTab = Window:CreateTab("Misc", 4483362458)
+    MiscTab:CreateSection("Tính Năng Khác")
+
+    -- Anti-AFK
+    MiscTab:CreateToggle({
+        Name = "Anti-AFK (Khuyến khích đứng ở máy chạy bộ)",
+        CurrentValue = false,
+        Flag = "AntiAFK",
+        Callback = function(Value)
+            antiAFKActive = Value
+            Rayfield:Notify({ Title = "Anti-AFK", Content = Value and "Đã BẬT" or "Đã TẮT", Duration = 2 })
+        end,
+    })
+
+    -- Ẩn toàn bộ Pet (ClientRenderedAssets)
+    MiscTab:CreateToggle({
+        Name = "Ẩn Toàn bộ Pet",
+        CurrentValue = false,
+        Flag = "HideAllPets",
+        Callback = function(Value)
+            if Value then
+                local assets = Workspace:FindFirstChild("ClientRenderedAssets")
+                if assets then
+                    hiddenAssetsFolder = assets
+                    hiddenAssetsFolder.Parent = nil
+                    Rayfield:Notify({ Title = "Misc", Content = "Đã ẨN Toàn bộ Pet", Duration = 2 })
+                else
+                    Rayfield:Notify({ Title = "Lỗi", Content = "Không tìm thấy ClientRenderedAssets!", Duration = 2.5 })
+                end
+            else
+                if hiddenAssetsFolder then
+                    hiddenAssetsFolder.Parent = Workspace
+                    hiddenAssetsFolder = nil
+                    Rayfield:Notify({ Title = "Misc", Content = "Đã HIỆN LẠI Toàn bộ Pet", Duration = 2 })
+                end
             end
         end,
     })

@@ -1,4 +1,4 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (AUTO DESTROY KEYLESS UI ON SUCCESS)
+--// RAYFIELD - SCRIPT HUB BY FTGS (DESTROY KEYLESS UI VIA TAB REBUILD)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Players = game:GetService("Players")
@@ -14,7 +14,6 @@ local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 local userEnteredKey = ""
 local targetKey = "21/8/2026-tjjsk" -- Key chính thức
 local keyUrl = "https://link4sub.com/notes/IqR0" -- Link Get Key
-local farmUnlocked = false
 
 local skipPromptActive = false
 local antiAFKActive = false
@@ -104,30 +103,21 @@ MainTab:CreateToggle({
 })
 
 --------------------------------------------------
--- TAB 2: FARM (TỰ XÓA GIAO DIỆN KEYLESS KHI DÙNG ĐÚNG KEY)
+-- TAB 2: FARM (XỬ LÝ KHÓA VÀ XÓA GIAO DIỆN KEYLESS)
 --------------------------------------------------
 local FarmTab = Window:CreateTab("Farm", 4483362458)
 
--- TẠO BIẾN CHỨA CÁC THÀNH PHẦN KEYLESS ĐỂ XÓA VỀ SAU
-local KeySection = FarmTab:CreateSection("Hệ Thống Keyless")
+local function LoadFarmFeatures()
+    -- XÓA TAB FARM CŨ CHỨA KEYLESS
+    pcall(function()
+        if FarmTab then FarmTab:Destroy() end
+    end)
 
-local KeyInput = FarmTab:CreateInput({
-    Name = "Nhập Key Tại Đây",
-    PlaceholderText = "____",
-    RemoveTextAfterFocusLost = false,
-    Callback = function(Text)
-        userEnteredKey = Text
-    end,
-})
+    -- TẠO LẠI TAB FARM MỚI SẠCH SẼ
+    local UnlockedFarmTab = Window:CreateTab("Farm", 4483362458)
+    UnlockedFarmTab:CreateSection("Tính Năng Farm")
 
--- HÀM TẠO CHỨC NĂNG FARM
-local function UnlockFarmFeatures()
-    if farmUnlocked then return end
-    farmUnlocked = true
-
-    FarmTab:CreateSection("Tính Năng Farm")
-
-    FarmTab:CreateSlider({
+    UnlockedFarmTab:CreateSlider({
         Name = "Tốc độ bay (Tween Speed)",
         Range = {50, 600},
         Increment = 10,
@@ -139,7 +129,7 @@ local function UnlockFarmFeatures()
         end,
     })
 
-    FarmTab:CreateButton({
+    UnlockedFarmTab:CreateButton({
         Name = "Safe Zone (Bay về khu vực an toàn)",
         Callback = function()
             Rayfield:Notify({ Title = "Safe Zone", Content = "Đang bay về Safe Zone...", Duration = 2 })
@@ -149,7 +139,7 @@ local function UnlockFarmFeatures()
         end,
     })
 
-    FarmTab:CreateToggle({
+    UnlockedFarmTab:CreateToggle({
         Name = "Mini Toggle (Nút bay nhanh về Safe Zone)",
         CurrentValue = false,
         Flag = "SafeZoneMiniToggle",
@@ -202,9 +192,19 @@ local function UnlockFarmFeatures()
     })
 end
 
-local CheckBtn, GetBtn, KeyParagraph
+-- TẠO KHUNG KEYLESS BAN ĐẦU
+FarmTab:CreateSection("Hệ Thống Keyless")
 
-CheckBtn = FarmTab:CreateButton({
+FarmTab:CreateInput({
+    Name = "Nhập Key Tại Đây",
+    PlaceholderText = "____",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Text)
+        userEnteredKey = Text
+    end,
+})
+
+FarmTab:CreateButton({
     Name = "Check Key",
     Callback = function()
         if userEnteredKey == targetKey then
@@ -213,18 +213,8 @@ CheckBtn = FarmTab:CreateButton({
                 Content = "Nhập Key Thành Công....",
                 Duration = 3
             })
-
-            -- XÓA SẠCH GIAO DIỆN KEYLESS
-            pcall(function()
-                if KeySection then KeySection:Destroy() end
-                if KeyInput then KeyInput:Destroy() end
-                if CheckBtn then CheckBtn:Destroy() end
-                if GetBtn then GetBtn:Destroy() end
-                if KeyParagraph then KeyParagraph:Destroy() end
-            end)
-
-            -- HIỆN TÍNH NĂNG FARM
-            UnlockFarmFeatures()
+            -- NHẬP ĐÚNG KEY: XÓA GIAO DIỆN KEYLESS VÀ NÂNG CẤP TAB FARM
+            LoadFarmFeatures()
         else
             Rayfield:Notify({
                 Title = "Hệ Thống Keyless",
@@ -235,7 +225,7 @@ CheckBtn = FarmTab:CreateButton({
     end,
 })
 
-GetBtn = FarmTab:CreateButton({
+FarmTab:CreateButton({
     Name = "Get Key Tại Đây",
     Callback = function()
         if setclipboard then
@@ -255,7 +245,7 @@ GetBtn = FarmTab:CreateButton({
     end,
 })
 
-KeyParagraph = FarmTab:CreateParagraph({
+FarmTab:CreateParagraph({
     Title = "--Hãy Lấy key Để sử dụng--",
     Content = "`-Key sẽ reset mỗi 12h/day-`"
 })

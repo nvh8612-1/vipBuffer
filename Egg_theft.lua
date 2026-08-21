@@ -1,4 +1,4 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (KEYLESS TAB + TRACK KEY SYSTEM)
+--// RAYFIELD - SCRIPT HUB BY FTGS (FULL KEYLESS SYSTEM + TIMED TRACK KEY)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Players = game:GetService("Players")
@@ -288,31 +288,37 @@ local function LoadKeyTab()
 end
 
 --------------------------------------------------
--- LOGIC TRACK KEY ĐẾM NGƯỢC
+-- LOGIC TRACK KEY ĐẾM NGƯỢC (HIỆN 900MS -> NGHỈ 200MS)
 --------------------------------------------------
 task.spawn(function()
     local savedKey = GetSavedKey()
 
     if savedKey then
-        -- Đếm ngược Track Key
-        Rayfield:Notify({ Title = "System", Content = "Đang Track Key 3..", Duration = 0.8 })
-        task.wait(1)
-        Rayfield:Notify({ Title = "System", Content = "Đang Track Key 2..", Duration = 0.8 })
-        task.wait(1)
-        Rayfield:Notify({ Title = "System", Content = "Đang Track Key 1..", Duration = 0.8 })
-        task.wait(1)
+        -- Track 3.. (Mất 900ms -> Nghỉ 200ms)
+        Rayfield:Notify({ Title = "System", Content = "Đang Track Key 3..", Duration = 0.9 })
+        task.wait(1.1)
 
-        -- Kiểm tra trùng khớp
+        -- Track 2.. (Mất 900ms -> Nghỉ 200ms)
+        Rayfield:Notify({ Title = "System", Content = "Đang Track Key 2..", Duration = 0.9 })
+        task.wait(1.1)
+
+        -- Track 1.. (Mất 900ms -> Nghỉ 200ms)
+        Rayfield:Notify({ Title = "System", Content = "Đang Track Key 1..", Duration = 0.9 })
+        task.wait(1.1)
+
+        -- Kiểm tra trùng khớp Key
         if savedKey == currentKey then
             isKeyUnlocked = true
-            Rayfield:Notify({ Title = "System", Content = "Key Hợp Lệ 🎉", Duration = 3 })
+            -- Key Hợp Lệ 🎉 (Mất sau 3000ms)
+            Rayfield:Notify({ Title = "System", Content = "Key Hợp Lệ 🎉", Duration = 3.0 })
             LoadMainTabs()
         else
-            Rayfield:Notify({ Title = "System", Content = "Key Đã Cập Nhật Hãy Get Key Mới 💫", Duration = 4 })
+            -- Key Đã Cập Nhật (Mất sau 2500ms) -> Nhả Tab Key
+            Rayfield:Notify({ Title = "System", Content = "Key Đã Cập Nhật Hãy Get Key Mới 💫", Duration = 2.5 })
             LoadKeyTab()
         end
     else
-        -- Lần đầu chạy chưa từng lưu Key
+        -- Lần đầu chạy chưa từng lưu Key -> Hiện Tab Key ngay
         LoadKeyTab()
     end
 end)

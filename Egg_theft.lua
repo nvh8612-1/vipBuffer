@@ -1,4 +1,4 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (FIXED GET KEY & CHECK KEY BUTTONS)
+--// RAYFIELD - SCRIPT HUB BY FTGS (DIRECT UI INJECTION FIX)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Players = game:GetService("Players")
@@ -60,7 +60,48 @@ local function SmoothTween(targetCFrame, speed)
 end
 
 --------------------------------------------------
--- WINDOW RAYFIELD TÍCH HỢP KEY SYSTEM chuẩn
+-- HÀM CAN THIỆP TRỰC TIẾP VÀO MÃ NGUỒN UI RAYFIELD
+--------------------------------------------------
+task.spawn(function()
+    local parentGui = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
+    local rayfieldGui = parentGui:WaitForChild("Rayfield", 5)
+    
+    if rayfieldGui then
+        -- Tìm khung Key UI
+        local keyMain = rayfieldGui:FindFirstChild("Key", true) or rayfieldGui:FindFirstChild("KeySystem", true)
+        if keyMain then
+            -- Ép kích thước khung hiển thị cố định để không bị co giật
+            keyMain.Size = UDim2.new(0, 500, 0, 260)
+            
+            -- Tìm và ẩn toàn bộ chữ Note / Tiêu đề Note
+            for _, obj in ipairs(keyMain:GetDescendants()) do
+                if obj:IsA("TextLabel") and (obj.Text:lower():find("note") or obj.Name:lower():find("note")) then
+                    obj.Visible = false
+                end
+            end
+            
+            -- Chỉnh lại vị trí ô nhập Key & Nút Get Key cho cân đối
+            local keyInput = keyMain:FindFirstChild("Input", true) or keyMain:FindFirstChildOfClass("TextBox")
+            if keyInput then
+                local inputFrame = keyInput.Parent
+                if inputFrame then
+                    inputFrame.Size = UDim2.new(0.9, 0, 0, 40)
+                    inputFrame.Position = UDim2.new(0.05, 0, 0.4, 0)
+                end
+            end
+
+            local actionsFrame = keyMain:FindFirstChild("Actions", true) or keyMain:FindFirstChild("Buttons", true)
+            if actionsFrame then
+                actionsFrame.Visible = true
+                actionsFrame.Position = UDim2.new(0.05, 0, 0.65, 0)
+                actionsFrame.Size = UDim2.new(0.9, 0, 0, 40)
+            end
+        end
+    end
+end)
+
+--------------------------------------------------
+-- WINDOW RAYFIELD
 --------------------------------------------------
 local Window = Rayfield:CreateWindow({
     Name = "FTGS HUB",
@@ -71,7 +112,7 @@ local Window = Rayfield:CreateWindow({
     KeySettings = {
         Title = "FTGS HUB | Key System",
         Subtitle = "Hãy lấy key để sử dụng (Reset 12h/day)",
-        Note = "Bấm Get Key để lấy link - Bấm Check Key sau khi nhập!", -- Bắt buộc có dòng này để Rayfield mở khung chứa Nút
+        Note = " ", -- Giữ khoảng trống để khởi tạo
         FileName = "FTGSKey_" .. currentKey,
         SaveKey = true,
         GrabKeyFromSite = false,
@@ -79,7 +120,7 @@ local Window = Rayfield:CreateWindow({
         KeyLink = keyUrl,
         Actions = {
             {
-                Text = "Get Key (Copy Link)",
+                Text = "Get Key",
                 OnPressed = function()
                     if setclipboard then
                         setclipboard(keyUrl)
@@ -133,7 +174,6 @@ MainTab:CreateToggle({
 -- TAB 2: FARM
 --------------------------------------------------
 local FarmTab = Window:CreateTab("Farm", 4483362458)
-
 FarmTab:CreateSection("Tính Năng Farm")
 
 FarmTab:CreateSlider({
@@ -214,7 +254,6 @@ FarmTab:CreateToggle({
 -- TAB 3: OP
 --------------------------------------------------
 local OPTab = Window:CreateTab("OP", 4483362458)
-
 OPTab:CreateButton({
     Name = "Freeze HP (0 Máu không die)",
     Callback = function()
@@ -235,14 +274,7 @@ OPTab:CreateButton({
     end,
 })
 
---------------------------------------------------
--- NOTIFICATION CẢM ƠN
---------------------------------------------------
-Rayfield:Notify({
-    Title = "FTGS HUB",
-    Content = "Thank you using 🔥",
-    Duration = 5
-})
+Rayfield:Notify({ Title = "FTGS HUB", Content = "Thank you using 🔥", Duration = 5 })
 
 --------------------------------------------------
 -- LOGIC PHỤ
@@ -260,17 +292,11 @@ task.spawn(function()
             pcall(function()
                 local char = LocalPlayer.Character
                 local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-                
                 if humanoid and humanoid.Health > 0 then
                     humanoid.MoveVector = Vector3.new(0, 0, -1)
                     task.wait(0.5)
                     humanoid.MoveVector = Vector3.new(0, 0, 0)
-
-                    Rayfield:Notify({
-                        Title = "Anti-AFK",
-                        Content = "Đã Thực hiện hành động AFK",
-                        Duration = 2
-                    })
+                    Rayfield:Notify({ Title = "Anti-AFK", Content = "Đã Thực hiện hành động AFK", Duration = 2 })
                 end
             end)
         end

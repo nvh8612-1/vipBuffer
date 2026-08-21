@@ -1,4 +1,4 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (AUTO KEY CONFIG)
+--// RAYFIELD - SCRIPT HUB BY FTGS (FIXED GET KEY & CHECK KEY BUTTONS)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Players = game:GetService("Players")
@@ -9,9 +9,9 @@ local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
 --------------------------------------------------
--- CẤU HÌNH KEY (ĐỔI KEY TẠI ĐÂY LÀ FILENAME TỰ ĐỔI THEO)
+-- CẤU HÌNH KEY
 --------------------------------------------------
-local currentKey = "21/8/2026-tjjsk" -- Key giữ nguyên như cũ
+local currentKey = "21/8/2026-tjjsk"
 local keyUrl = "https://link4sub.com/notes/IqR0"
 
 --------------------------------------------------
@@ -60,7 +60,7 @@ local function SmoothTween(targetCFrame, speed)
 end
 
 --------------------------------------------------
--- WINDOW RAYFIELD TÍCH HỢP KEY SYSTEM
+-- WINDOW RAYFIELD TÍCH HỢP KEY SYSTEM chuẩn
 --------------------------------------------------
 local Window = Rayfield:CreateWindow({
     Name = "FTGS HUB",
@@ -71,15 +71,15 @@ local Window = Rayfield:CreateWindow({
     KeySettings = {
         Title = "FTGS HUB | Key System",
         Subtitle = "Hãy lấy key để sử dụng (Reset 12h/day)",
-        Note = "",
-        FileName = "FTGSKey_" .. currentKey, -- Tự động gán tên File theo tên Key!
-        SaveKey = true,                       -- Tự động bỏ qua bước nhập nếu đã nhập Key trước đó
+        Note = "Bấm Get Key để lấy link - Bấm Check Key sau khi nhập!", -- Bắt buộc có dòng này để Rayfield mở khung chứa Nút
+        FileName = "FTGSKey_" .. currentKey,
+        SaveKey = true,
         GrabKeyFromSite = false,
         Key = {currentKey},
         KeyLink = keyUrl,
         Actions = {
             {
-                Text = "Get Key",
+                Text = "Get Key (Copy Link)",
                 OnPressed = function()
                     if setclipboard then
                         setclipboard(keyUrl)

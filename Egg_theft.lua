@@ -1,4 +1,4 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (UPDATED HOOK LINK)
+--// RAYFIELD - SCRIPT HUB BY FTGS (FIXED GODMODE)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Players = game:GetService("Players")
@@ -54,7 +54,8 @@ local areaCFrames = {
 
 local areaGuis = {}
 local hiddenAssetsFolder = nil
-local freezeConnection = nil
+local godmodeActive = false
+local touchConnections = {}
 
 --------------------------------------------------
 -- HÀM XỬ LÝ FILE KEY
@@ -346,38 +347,41 @@ local function LoadMainTabs()
     -- TAB OP
     local OPTab = Window:CreateTab("OP", 4483362458)
     OPTab:CreateToggle({
-        Name = "Godmode / Bất Tử HP (Chống Die)",
+        Name = "Bỏ Qua Va Chạm Sát Thương (No-Touch Damage)",
         CurrentValue = false,
-        Flag = "GodModeHP",
+        Flag = "GodModeTouch",
         Callback = function(Value)
+            godmodeActive = Value
             if Value then
-                if freezeConnection then freezeConnection:Disconnect() end
-                
-                freezeConnection = RunService.Heartbeat:Connect(function()
-                    pcall(function()
-                        local char = LocalPlayer.Character
-                        local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-                        if humanoid then
-                            if humanoid.Health < humanoid.MaxHealth then
-                                humanoid.Health = humanoid.MaxHealth
+                pcall(function()
+                    local char = LocalPlayer.Character
+                    if char then
+                        for _, part in ipairs(char:GetDescendants()) do
+                            if part:IsA("BasePart") then
+                                part.CanTouch = false
                             end
                         end
-                    end)
+                    end
                 end)
-
                 Rayfield:Notify({
-                    Title = "Godmode HP",
-                    Content = "Đã BẬT Bất Tử Máu!",
+                    Title = "Godmode",
+                    Content = "Đã BẬT Bỏ Qua Va Chạm Sát Thương!",
                     Duration = 2.5
                 })
             else
-                if freezeConnection then
-                    freezeConnection:Disconnect()
-                    freezeConnection = nil
-                end
+                pcall(function()
+                    local char = LocalPlayer.Character
+                    if char then
+                        for _, part in ipairs(char:GetDescendants()) do
+                            if part:IsA("BasePart") then
+                                part.CanTouch = true
+                            end
+                        end
+                    end
+                end)
                 Rayfield:Notify({
-                    Title = "Godmode HP",
-                    Content = "Đã TẮT Bất Tử Máu",
+                    Title = "Godmode",
+                    Content = "Đã TẮT Godmode",
                     Duration = 2
                 })
             end

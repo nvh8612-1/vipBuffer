@@ -199,7 +199,7 @@ local function LoadMainTabs()
     })
 
     MainTab:CreateToggle({
-        Name = "Auto Zone (Đụng Prompt Tự Bay Về Safe Zone)",
+        Name = "Auto Zone (Lụm Trứng=Bay về Zone Tắt khi mở trứng!!!)",
         CurrentValue = false,
         Flag = "AutoZone",
         Callback = function(Value)

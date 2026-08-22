@@ -1,4 +1,4 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (UPDATED UI & FEATURES)
+--// RAYFIELD - SCRIPT HUB BY FTGS (AUTO EXECUTE ON TELEPORT)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Players = game:GetService("Players")
@@ -7,8 +7,24 @@ local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
+
+--------------------------------------------------
+-- HÀM LƯU SCRIPT ĐỂ TỰ ĐỘNG CHẠY KHI HOP SERVER
+--------------------------------------------------
+local function QueueScriptForTeleport()
+    local teleportScript = [[
+        task.wait(3)
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/LINK_SCRIPT_CUA_BAN_TAI_DAY.lua"))()
+    ]]
+    
+    local queueFunc = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
+    if queueFunc then
+        queueFunc(teleportScript)
+    end
+end
 
 --------------------------------------------------
 -- CẤU HÌNH KEY & FILE STORAGE
@@ -21,6 +37,7 @@ local inputKeyText = ""
 local isKeyUnlocked = false
 
 local skipPromptActive = false
+local autoZoneActive = false
 local antiAFKActive = false
 local tweenSpeed = 250
 local safeZoneCFrame = CFrame.new(534.61, 70.27, -366.91, 0.051, 0, -0.999, 0, 1, 0, 0.999, 0, 0.051)
@@ -90,7 +107,7 @@ local function SmoothTween(targetCFrame, speed)
 end
 
 --------------------------------------------------
--- HÀM TẠO NÚT MINI AREA (ĐÃ ĐIỀU CHỈNH CAO & KHÍT NHAU)
+-- HÀM TẠO NÚT MINI AREA
 --------------------------------------------------
 local function CreateMiniAreaButton(areaName, targetCFrame, bgColor, yScale, yOffsetPixel)
     if areaGuis[areaName] then
@@ -107,7 +124,7 @@ local function CreateMiniAreaButton(areaName, targetCFrame, bgColor, yScale, yOf
     btn.Name = "Btn"
     btn.Parent = gui
     btn.AnchorPoint = Vector2.new(1, 0.5)
-    btn.Size = UDim2.new(0, 90, 0, 26) -- Kích thước thu gọn mỏng & khít hơn
+    btn.Size = UDim2.new(0, 90, 0, 26)
     btn.Position = UDim2.new(1, -15, yScale, yOffsetPixel)
     btn.BackgroundColor3 = bgColor
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -157,7 +174,7 @@ local Window = Rayfield:CreateWindow({
 -- HÀM TẠO CÁC TAB TÍNH NĂNG
 --------------------------------------------------
 local function LoadMainTabs()
-    -- TAB MAIN (GỒM TẤT CẢ TÍNH NĂNG MAIN + FARM CŨ)
+    -- TAB MAIN
     local MainTab = Window:CreateTab("Main", 4483362458)
 
     MainTab:CreateSection("Tính Năng Cơ Bản")
@@ -178,6 +195,16 @@ local function LoadMainTabs()
             else
                 Rayfield:Notify({ Title = "Skip Prompt", Content = "Đã TẮT", Duration = 2 })
             end
+        end,
+    })
+
+    MainTab:CreateToggle({
+        Name = "Auto Zone (Đụng Prompt Tự Bay Về Safe Zone)",
+        CurrentValue = false,
+        Flag = "AutoZone",
+        Callback = function(Value)
+            autoZoneActive = Value
+            Rayfield:Notify({ Title = "Auto Zone", Content = Value and "Đã BẬT" or "Đã TẮT", Duration = 2 })
         end,
     })
 
@@ -222,7 +249,7 @@ local function LoadMainTabs()
                     SafeBtn.Parent = safeZoneGui
                     SafeBtn.AnchorPoint = Vector2.new(1, 0.5)
                     SafeBtn.Size = UDim2.new(0, 52, 0, 52)
-                    SafeBtn.Position = UDim2.new(1, -112, 0.12, 0) -- Cao hơn và khít góc bên phải
+                    SafeBtn.Position = UDim2.new(1, -112, 0.12, 0)
                     SafeBtn.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
                     SafeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
                     SafeBtn.Text = "SAFE"
@@ -262,7 +289,6 @@ local function LoadMainTabs()
     local AreaTab = Window:CreateTab("Area", 4483362458)
     AreaTab:CreateSection("Nút Bay Nhanh Khu Vực (Mini Toggle)")
 
-    -- Vị trí Y cao hơn (0.12 scale) và khoảng cách giữa các nút rút ngắn về 28px
     AreaTab:CreateToggle({
         Name = "Volcano Mini Toggle",
         CurrentValue = false,
@@ -345,6 +371,7 @@ local function LoadMainTabs()
         Name = "Server Hop (Dịch chuyển đến Server khác)",
         Callback = function()
             Rayfield:Notify({ Title = "Server Hop", Content = "Đang tìm Server ngẫu nhiên...", Duration = 3 })
+            QueueScriptForTeleport()
             pcall(function()
                 local placeId = game.PlaceId
                 local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. placeId .. "/servers/0?sortOrder=Asc&limit=100")).data
@@ -369,6 +396,7 @@ local function LoadMainTabs()
         Name = "Server Small (Dịch chuyển đến Server ít người)",
         Callback = function()
             Rayfield:Notify({ Title = "Server Small", Content = "Đang tìm Server ít người nhất...", Duration = 3 })
+            QueueScriptForTeleport()
             pcall(function()
                 local placeId = game.PlaceId
                 local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. placeId .. "/servers/0?sortOrder=Asc&limit=100")).data
@@ -524,11 +552,19 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- LOGIC PROXIMITY PROMPT
+-- LOGIC PROXIMITY PROMPT & AUTO ZONE
 --------------------------------------------------
 Workspace.DescendantAdded:Connect(function(descendant)
     if skipPromptActive and descendant:IsA("ProximityPrompt") then
         pcall(function() descendant.HoldDuration = 0 end)
+    end
+end)
+
+ProximityPromptService.PromptTriggered:Connect(function(prompt, playerWhoTriggered)
+    if autoZoneActive and playerWhoTriggered == LocalPlayer then
+        task.spawn(function()
+            SmoothTween(safeZoneCFrame, tweenSpeed)
+        end)
     end
 end)
 

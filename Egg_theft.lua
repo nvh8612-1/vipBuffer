@@ -1,4 +1,4 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (FIXED UI POSITION & ALIGNMENT)
+--// RAYFIELD - SCRIPT HUB BY FTGS (UPDATED KEY & LINK)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Players = game:GetService("Players")
@@ -9,10 +9,10 @@ local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
 --------------------------------------------------
--- CẤU HÌNH KEY & FILE STORAGE
+-- CẤU HÌNH KEY & FILE STORAGE (ĐÃ CẬP NHẬT)
 --------------------------------------------------
-local currentKey = "21/8/2026-tjjsk"
-local keyUrl = "https://link4sub.com/notes/IqR0"
+local currentKey = "2026-tjjsk"
+local keyUrl = "https://link4sub.com/notes/cLCN"
 local fileName = "FTGSKey_Saved.txt"
 
 local inputKeyText = ""
@@ -29,7 +29,7 @@ local areaCFrames = {
     Cosmic = CFrame.new(3392.59, 70.27, -337.56, -1.000, 0.000, 0.018, 0.000, 1.000, 0.000, -0.018, 0.000, -1.000),
     Prehistoric = CFrame.new(2813.55, 70.27, -381.25, 1.000, 0.000, 0.024, -0.000, 1.000, -0.000, -0.024, 0.000, 1.000),
     Ocean = CFrame.new(2280.64, 70.27, -343.30, -1.000, 0.000, -0.009, 0.000, 1.000, 0.000, 0.009, 0.000, -1.000),
-    Volcano = CFrame.new(1878.76, 70.27, -381.89, 1.000, -0.000, 0.002, 0.000, 1.000, -0.000, -0.02, 0.000, 1.000)
+    Volcano = CFrame.new(1878.76, 70.27, -381.89, 1.000, -0.000, 0.002, 0.000, 1.000, -0.000, -0.002, 0.000, 1.000)
 }
 
 local areaGuis = {}
@@ -104,9 +104,8 @@ local function CreateMiniAreaButton(areaName, targetCFrame, bgColor, yScale, yOf
     local btn = Instance.new("TextButton")
     btn.Name = "Btn"
     btn.Parent = gui
-    btn.AnchorPoint = Vector2.new(1, 0.5) -- Căn lề tâm-phải để chuẩn hình
+    btn.AnchorPoint = Vector2.new(1, 0.5)
     btn.Size = UDim2.new(0, 95, 0, 38)
-    -- Nằm cách mép phải 20px, vị trí Y tính chuẩn theo dòng
     btn.Position = UDim2.new(1, -20, yScale, yOffsetPixel)
     btn.BackgroundColor3 = bgColor
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -221,7 +220,6 @@ local function LoadMainTabs()
                     SafeBtn.Parent = safeZoneGui
                     SafeBtn.AnchorPoint = Vector2.new(1, 0.5)
                     SafeBtn.Size = UDim2.new(0, 62, 0, 62)
-                    -- Đặt nút SAFE nằm ngay bên trái của cột nút Area
                     SafeBtn.Position = UDim2.new(1, -125, 0.35, 0)
                     SafeBtn.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
                     SafeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -262,7 +260,6 @@ local function LoadMainTabs()
     local AreaTab = Window:CreateTab("Area", 4483362458)
     AreaTab:CreateSection("Nút Bay Nhanh Khu Vực (Mini Toggle)")
 
-    -- Sắp xếp 4 nút xếp thành cột dọc chuẩn không bị lệch
     AreaTab:CreateToggle({
         Name = "Volcano Mini Toggle",
         CurrentValue = false,

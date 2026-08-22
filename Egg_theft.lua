@@ -1,4 +1,4 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (FULL + TAB AREA & MINI TWEEN BUTTONS)
+--// RAYFIELD - SCRIPT HUB BY FTGS (FIXED UI POSITION & ALIGNMENT)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Players = game:GetService("Players")
@@ -29,7 +29,7 @@ local areaCFrames = {
     Cosmic = CFrame.new(3392.59, 70.27, -337.56, -1.000, 0.000, 0.018, 0.000, 1.000, 0.000, -0.018, 0.000, -1.000),
     Prehistoric = CFrame.new(2813.55, 70.27, -381.25, 1.000, 0.000, 0.024, -0.000, 1.000, -0.000, -0.024, 0.000, 1.000),
     Ocean = CFrame.new(2280.64, 70.27, -343.30, -1.000, 0.000, -0.009, 0.000, 1.000, 0.000, 0.009, 0.000, -1.000),
-    Volcano = CFrame.new(1878.76, 70.27, -381.89, 1.000, -0.000, 0.002, 0.000, 1.000, -0.000, -0.002, 0.000, 1.000)
+    Volcano = CFrame.new(1878.76, 70.27, -381.89, 1.000, -0.000, 0.002, 0.000, 1.000, -0.000, -0.02, 0.000, 1.000)
 }
 
 local areaGuis = {}
@@ -88,9 +88,9 @@ local function SmoothTween(targetCFrame, speed)
 end
 
 --------------------------------------------------
--- HÀM TẠO NÚT MINI DỜI VỊ TRÍ TỰ ĐỘNG
+-- HÀM TẠO NÚT MINI AREA (CHUẨN TỌA ĐỘ BẰNG ANCHORPOINT)
 --------------------------------------------------
-local function CreateMiniAreaButton(areaName, targetCFrame, bgColor, posOffset)
+local function CreateMiniAreaButton(areaName, targetCFrame, bgColor, yScale, yOffsetPixel)
     if areaGuis[areaName] then
         areaGuis[areaName]:Destroy()
         areaGuis[areaName] = nil
@@ -104,12 +104,14 @@ local function CreateMiniAreaButton(areaName, targetCFrame, bgColor, posOffset)
     local btn = Instance.new("TextButton")
     btn.Name = "Btn"
     btn.Parent = gui
-    btn.Size = UDim2.new(0, 75, 0, 35)
-    btn.Position = UDim2.new(0.05, 0, 0.45 + posOffset, 0)
+    btn.AnchorPoint = Vector2.new(1, 0.5) -- Căn lề tâm-phải để chuẩn hình
+    btn.Size = UDim2.new(0, 95, 0, 38)
+    -- Nằm cách mép phải 20px, vị trí Y tính chuẩn theo dòng
+    btn.Position = UDim2.new(1, -20, yScale, yOffsetPixel)
     btn.BackgroundColor3 = bgColor
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Text = areaName
-    btn.TextSize = 13
+    btn.TextSize = 14
     btn.Font = Enum.Font.SourceSansBold
     btn.Active = true
     btn.Draggable = true
@@ -119,12 +121,11 @@ local function CreateMiniAreaButton(areaName, targetCFrame, bgColor, posOffset)
     UICorner.Parent = btn
 
     local UIStroke = Instance.new("UIStroke")
-    UIStroke.Thickness = 2
+    UIStroke.Thickness = 1.5
     UIStroke.Color = Color3.fromRGB(255, 255, 255)
     UIStroke.Parent = btn
 
     btn.MouseButton1Click:Connect(function()
-        Rayfield:Notify({ Title = "Teleport", Content = "Đang Tween tới " .. areaName .. "...", Duration = 1.5 })
         task.spawn(function()
             SmoothTween(targetCFrame, tweenSpeed)
         end)
@@ -152,7 +153,7 @@ local Window = Rayfield:CreateWindow({
 })
 
 --------------------------------------------------
--- HÀM TẠO CÁC TAB TÍNH NĂNG (MAIN, FARM, AREA, OP, MISC)
+-- HÀM TẠO CÁC TAB TÍNH NĂNG
 --------------------------------------------------
 local function LoadMainTabs()
     -- TAB MAIN
@@ -218,12 +219,14 @@ local function LoadMainTabs()
                     local SafeBtn = Instance.new("TextButton")
                     SafeBtn.Name = "SafeBtn"
                     SafeBtn.Parent = safeZoneGui
-                    SafeBtn.Size = UDim2.new(0, 50, 0, 50)
-                    SafeBtn.Position = UDim2.new(0.05, 0, 0.33, 0)
+                    SafeBtn.AnchorPoint = Vector2.new(1, 0.5)
+                    SafeBtn.Size = UDim2.new(0, 62, 0, 62)
+                    -- Đặt nút SAFE nằm ngay bên trái của cột nút Area
+                    SafeBtn.Position = UDim2.new(1, -125, 0.35, 0)
                     SafeBtn.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
                     SafeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
                     SafeBtn.Text = "SAFE"
-                    SafeBtn.TextSize = 14
+                    SafeBtn.TextSize = 15
                     SafeBtn.Font = Enum.Font.SourceSansBold
                     SafeBtn.Active = true
                     SafeBtn.Draggable = true
@@ -259,66 +262,55 @@ local function LoadMainTabs()
     local AreaTab = Window:CreateTab("Area", 4483362458)
     AreaTab:CreateSection("Nút Bay Nhanh Khu Vực (Mini Toggle)")
 
-    -- 1. Cosmic (Màu Tím)
-    AreaTab:CreateToggle({
-        Name = "Cosmic Mini Toggle",
-        CurrentValue = false,
-        Flag = "CosmicMini",
-        Callback = function(Value)
-            if Value then
-                CreateMiniAreaButton("Cosmic", areaCFrames.Cosmic, Color3.fromRGB(138, 43, 226), 0.00)
-                Rayfield:Notify({ Title = "Area", Content = "Đã BẬT Mini Btn: Cosmic", Duration = 1.5 })
-            else
-                RemoveMiniAreaButton("Cosmic")
-                Rayfield:Notify({ Title = "Area", Content = "Đã TẮT Mini Btn: Cosmic", Duration = 1.5 })
-            end
-        end,
-    })
-
-    -- 2. Prehistoric (Màu Xanh Lá Hơi Đậm)
-    AreaTab:CreateToggle({
-        Name = "Prehistoric Mini Toggle",
-        CurrentValue = false,
-        Flag = "PrehistoricMini",
-        Callback = function(Value)
-            if Value then
-                CreateMiniAreaButton("Prehistoric", areaCFrames.Prehistoric, Color3.fromRGB(34, 139, 34), 0.06)
-                Rayfield:Notify({ Title = "Area", Content = "Đã BẬT Mini Btn: Prehistoric", Duration = 1.5 })
-            else
-                RemoveMiniAreaButton("Prehistoric")
-                Rayfield:Notify({ Title = "Area", Content = "Đã TẮT Mini Btn: Prehistoric", Duration = 1.5 })
-            end
-        end,
-    })
-
-    -- 3. Volcano (Màu Đỏ Cam Núi Lửa)
+    -- Sắp xếp 4 nút xếp thành cột dọc chuẩn không bị lệch
     AreaTab:CreateToggle({
         Name = "Volcano Mini Toggle",
         CurrentValue = false,
         Flag = "VolcanoMini",
         Callback = function(Value)
             if Value then
-                CreateMiniAreaButton("Volcano", areaCFrames.Volcano, Color3.fromRGB(225, 68, 0), 0.12)
-                Rayfield:Notify({ Title = "Area", Content = "Đã BẬT Mini Btn: Volcano", Duration = 1.5 })
+                CreateMiniAreaButton("Volcano", areaCFrames.Volcano, Color3.fromRGB(225, 68, 0), 0.20, 0)
             else
                 RemoveMiniAreaButton("Volcano")
-                Rayfield:Notify({ Title = "Area", Content = "Đã TẮT Mini Btn: Volcano", Duration = 1.5 })
             end
         end,
     })
 
-    -- 4. Ocean (Màu Đại Dương)
     AreaTab:CreateToggle({
         Name = "Ocean Mini Toggle",
         CurrentValue = false,
         Flag = "OceanMini",
         Callback = function(Value)
             if Value then
-                CreateMiniAreaButton("Ocean", areaCFrames.Ocean, Color3.fromRGB(0, 119, 182), 0.18)
-                Rayfield:Notify({ Title = "Area", Content = "Đã BẬT Mini Btn: Ocean", Duration = 1.5 })
+                CreateMiniAreaButton("Ocean", areaCFrames.Ocean, Color3.fromRGB(0, 119, 182), 0.20, 44)
             else
                 RemoveMiniAreaButton("Ocean")
-                Rayfield:Notify({ Title = "Area", Content = "Đã TẮT Mini Btn: Ocean", Duration = 1.5 })
+            end
+        end,
+    })
+
+    AreaTab:CreateToggle({
+        Name = "Prehistoric Mini Toggle",
+        CurrentValue = false,
+        Flag = "PrehistoricMini",
+        Callback = function(Value)
+            if Value then
+                CreateMiniAreaButton("Prehistoric", areaCFrames.Prehistoric, Color3.fromRGB(34, 139, 34), 0.20, 88)
+            else
+                RemoveMiniAreaButton("Prehistoric")
+            end
+        end,
+    })
+
+    AreaTab:CreateToggle({
+        Name = "Cosmic Mini Toggle",
+        CurrentValue = false,
+        Flag = "CosmicMini",
+        Callback = function(Value)
+            if Value then
+                CreateMiniAreaButton("Cosmic", areaCFrames.Cosmic, Color3.fromRGB(138, 43, 226), 0.20, 132)
+            else
+                RemoveMiniAreaButton("Cosmic")
             end
         end,
     })
@@ -350,7 +342,7 @@ local function LoadMainTabs()
     MiscTab:CreateSection("Tính Năng Khác")
 
     MiscTab:CreateToggle({
-        Name = "Anti-AFK (Khuyến khích đứng ở máy chạy bộ)",
+        Name = "Anti-AFK (Giả Lập Joystick 3 Cách)",
         CurrentValue = false,
         Flag = "AntiAFK",
         Callback = function(Value)
@@ -448,7 +440,7 @@ local function LoadKeyTab()
 end
 
 --------------------------------------------------
--- LOGIC TRACK KEY ĐẾM NGƯỢC (HIỆN 900MS -> NGHỈ 200MS)
+-- LOGIC TRACK KEY
 --------------------------------------------------
 task.spawn(function()
     local savedKey = GetSavedKey()
@@ -477,7 +469,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- LOGIC PHỤ (PROXIMITY PROMPT & ANTI-AFK)
+-- LOGIC PROXIMITY PROMPT
 --------------------------------------------------
 Workspace.DescendantAdded:Connect(function(descendant)
     if skipPromptActive and descendant:IsA("ProximityPrompt") then
@@ -485,18 +477,53 @@ Workspace.DescendantAdded:Connect(function(descendant)
     end
 end)
 
+--------------------------------------------------
+-- LOGIC ANTI-AFK (KẾT HỢP 3 CÁCH)
+--------------------------------------------------
 task.spawn(function()
+    local PlayerScripts = LocalPlayer:WaitForChild("PlayerScripts")
+    local MasterControl = nil
+    
+    pcall(function()
+        local ControlModule = require(PlayerScripts:WaitForChild("PlayerModule")):GetControls()
+        MasterControl = ControlModule
+    end)
+
     while true do
-        task.wait(30)
+        task.wait(15)
         if antiAFKActive then
             pcall(function()
                 local char = LocalPlayer.Character
                 local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-                if humanoid and humanoid.Health > 0 then
-                    humanoid.MoveVector = Vector3.new(0, 0, -1)
-                    task.wait(0.5)
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+                if humanoid and hrp and humanoid.Health > 0 then
+                    local duration = 0.6
+                    local startTime = os.clock()
+
+                    while os.clock() - startTime < duration do
+                        if MasterControl and MasterControl.moveFunction then
+                            MasterControl.moveFunction(LocalPlayer, Vector3.new(0, 0, -1), true)
+                        end
+
+                        humanoid.MoveVector = Vector3.new(0, 0, -1)
+                        pcall(function()
+                            humanoid.InputMoveVector = Vector3.new(0, 0, -1)
+                        end)
+
+                        humanoid:Move(Vector3.new(0, 0, -1), true)
+
+                        RunService.RenderStepped:Wait()
+                    end
+
+                    if MasterControl and MasterControl.moveFunction then
+                        MasterControl.moveFunction(LocalPlayer, Vector3.new(0, 0, 0), false)
+                    end
                     humanoid.MoveVector = Vector3.new(0, 0, 0)
-                    Rayfield:Notify({ Title = "Anti-AFK", Content = "Đã Thực hiện hành động AFK", Duration = 2 })
+                    pcall(function()
+                        humanoid.InputMoveVector = Vector3.new(0, 0, 0)
+                    end)
+                    humanoid:Move(Vector3.new(0, 0, 0), false)
                 end
             end)
         end

@@ -1,15 +1,17 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (UPDATED KEY & LINK)
+--// RAYFIELD - SCRIPT HUB BY FTGS (UPDATED UI & FEATURES)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
 
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
 --------------------------------------------------
--- CẤU HÌNH KEY & FILE STORAGE (ĐÃ CẬP NHẬT)
+-- CẤU HÌNH KEY & FILE STORAGE
 --------------------------------------------------
 local currentKey = "2026-tjjsk"
 local keyUrl = "https://link4sub.com/notes/cLCN"
@@ -88,7 +90,7 @@ local function SmoothTween(targetCFrame, speed)
 end
 
 --------------------------------------------------
--- HÀM TẠO NÚT MINI AREA (CHUẨN TỌA ĐỘ BẰNG ANCHORPOINT)
+-- HÀM TẠO NÚT MINI AREA (ĐÃ ĐIỀU CHỈNH CAO & KHÍT NHAU)
 --------------------------------------------------
 local function CreateMiniAreaButton(areaName, targetCFrame, bgColor, yScale, yOffsetPixel)
     if areaGuis[areaName] then
@@ -105,22 +107,22 @@ local function CreateMiniAreaButton(areaName, targetCFrame, bgColor, yScale, yOf
     btn.Name = "Btn"
     btn.Parent = gui
     btn.AnchorPoint = Vector2.new(1, 0.5)
-    btn.Size = UDim2.new(0, 95, 0, 38)
-    btn.Position = UDim2.new(1, -20, yScale, yOffsetPixel)
+    btn.Size = UDim2.new(0, 90, 0, 26) -- Kích thước thu gọn mỏng & khít hơn
+    btn.Position = UDim2.new(1, -15, yScale, yOffsetPixel)
     btn.BackgroundColor3 = bgColor
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Text = areaName
-    btn.TextSize = 14
+    btn.TextSize = 13
     btn.Font = Enum.Font.SourceSansBold
     btn.Active = true
     btn.Draggable = true
 
     local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 8)
+    UICorner.CornerRadius = UDim.new(0, 6)
     UICorner.Parent = btn
 
     local UIStroke = Instance.new("UIStroke")
-    UIStroke.Thickness = 1.5
+    UIStroke.Thickness = 1.2
     UIStroke.Color = Color3.fromRGB(255, 255, 255)
     UIStroke.Parent = btn
 
@@ -155,8 +157,10 @@ local Window = Rayfield:CreateWindow({
 -- HÀM TẠO CÁC TAB TÍNH NĂNG
 --------------------------------------------------
 local function LoadMainTabs()
-    -- TAB MAIN
+    -- TAB MAIN (GỒM TẤT CẢ TÍNH NĂNG MAIN + FARM CŨ)
     local MainTab = Window:CreateTab("Main", 4483362458)
+
+    MainTab:CreateSection("Tính Năng Cơ Bản")
 
     MainTab:CreateToggle({
         Name = "Skip Prompt (Bỏ qua nhặt ngay lập tức)",
@@ -177,11 +181,9 @@ local function LoadMainTabs()
         end,
     })
 
-    -- TAB FARM
-    local FarmTab = Window:CreateTab("Farm", 4483362458)
-    FarmTab:CreateSection("Tính Năng Farm")
+    MainTab:CreateSection("Tính Năng Farm & Safe Zone")
 
-    FarmTab:CreateSlider({
+    MainTab:CreateSlider({
         Name = "Tốc độ bay (Tween Speed)",
         Range = {50, 600},
         Increment = 10,
@@ -193,7 +195,7 @@ local function LoadMainTabs()
         end,
     })
 
-    FarmTab:CreateButton({
+    MainTab:CreateButton({
         Name = "Safe Zone (Bay về khu vực an toàn)",
         Callback = function()
             Rayfield:Notify({ Title = "Safe Zone", Content = "Đang bay về Safe Zone...", Duration = 2 })
@@ -203,7 +205,7 @@ local function LoadMainTabs()
         end,
     })
 
-    FarmTab:CreateToggle({
+    MainTab:CreateToggle({
         Name = "Mini Toggle (Nút bay nhanh về Safe Zone)",
         CurrentValue = false,
         Flag = "SafeZoneMiniToggle",
@@ -219,12 +221,12 @@ local function LoadMainTabs()
                     SafeBtn.Name = "SafeBtn"
                     SafeBtn.Parent = safeZoneGui
                     SafeBtn.AnchorPoint = Vector2.new(1, 0.5)
-                    SafeBtn.Size = UDim2.new(0, 62, 0, 62)
-                    SafeBtn.Position = UDim2.new(1, -125, 0.35, 0)
+                    SafeBtn.Size = UDim2.new(0, 52, 0, 52)
+                    SafeBtn.Position = UDim2.new(1, -112, 0.12, 0) -- Cao hơn và khít góc bên phải
                     SafeBtn.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
                     SafeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
                     SafeBtn.Text = "SAFE"
-                    SafeBtn.TextSize = 15
+                    SafeBtn.TextSize = 14
                     SafeBtn.Font = Enum.Font.SourceSansBold
                     SafeBtn.Active = true
                     SafeBtn.Draggable = true
@@ -234,7 +236,7 @@ local function LoadMainTabs()
                     UICorner.Parent = SafeBtn
 
                     local UIStroke = Instance.new("UIStroke")
-                    UIStroke.Thickness = 2
+                    UIStroke.Thickness = 1.5
                     UIStroke.Color = Color3.fromRGB(255, 255, 255)
                     UIStroke.Parent = SafeBtn
 
@@ -256,17 +258,18 @@ local function LoadMainTabs()
         end,
     })
 
-    -- TAB AREA (KẾ BÊN FARM)
+    -- TAB AREA
     local AreaTab = Window:CreateTab("Area", 4483362458)
     AreaTab:CreateSection("Nút Bay Nhanh Khu Vực (Mini Toggle)")
 
+    -- Vị trí Y cao hơn (0.12 scale) và khoảng cách giữa các nút rút ngắn về 28px
     AreaTab:CreateToggle({
         Name = "Volcano Mini Toggle",
         CurrentValue = false,
         Flag = "VolcanoMini",
         Callback = function(Value)
             if Value then
-                CreateMiniAreaButton("Volcano", areaCFrames.Volcano, Color3.fromRGB(225, 68, 0), 0.20, 0)
+                CreateMiniAreaButton("Volcano", areaCFrames.Volcano, Color3.fromRGB(225, 68, 0), 0.12, 0)
             else
                 RemoveMiniAreaButton("Volcano")
             end
@@ -279,7 +282,7 @@ local function LoadMainTabs()
         Flag = "OceanMini",
         Callback = function(Value)
             if Value then
-                CreateMiniAreaButton("Ocean", areaCFrames.Ocean, Color3.fromRGB(0, 119, 182), 0.20, 44)
+                CreateMiniAreaButton("Ocean", areaCFrames.Ocean, Color3.fromRGB(0, 119, 182), 0.12, 28)
             else
                 RemoveMiniAreaButton("Ocean")
             end
@@ -292,7 +295,7 @@ local function LoadMainTabs()
         Flag = "PrehistoricMini",
         Callback = function(Value)
             if Value then
-                CreateMiniAreaButton("Prehistoric", areaCFrames.Prehistoric, Color3.fromRGB(34, 139, 34), 0.20, 88)
+                CreateMiniAreaButton("Prehistoric", areaCFrames.Prehistoric, Color3.fromRGB(34, 139, 34), 0.12, 56)
             else
                 RemoveMiniAreaButton("Prehistoric")
             end
@@ -305,7 +308,7 @@ local function LoadMainTabs()
         Flag = "CosmicMini",
         Callback = function(Value)
             if Value then
-                CreateMiniAreaButton("Cosmic", areaCFrames.Cosmic, Color3.fromRGB(138, 43, 226), 0.20, 132)
+                CreateMiniAreaButton("Cosmic", areaCFrames.Cosmic, Color3.fromRGB(138, 43, 226), 0.12, 84)
             else
                 RemoveMiniAreaButton("Cosmic")
             end
@@ -336,6 +339,61 @@ local function LoadMainTabs()
 
     -- TAB MISC
     local MiscTab = Window:CreateTab("Misc", 4483362458)
+    MiscTab:CreateSection("Chuyển Server")
+
+    MiscTab:CreateButton({
+        Name = "Server Hop (Dịch chuyển đến Server khác)",
+        Callback = function()
+            Rayfield:Notify({ Title = "Server Hop", Content = "Đang tìm Server ngẫu nhiên...", Duration = 3 })
+            pcall(function()
+                local placeId = game.PlaceId
+                local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. placeId .. "/servers/0?sortOrder=Asc&limit=100")).data
+                local validServers = {}
+                
+                for _, s in ipairs(servers) do
+                    if s.id ~= game.JobId and s.playing < s.maxPlayers then
+                        table.insert(validServers, s.id)
+                    end
+                end
+
+                if #validServers > 0 then
+                    TeleportService:TeleportToPlaceInstance(placeId, validServers[math.random(1, #validServers)], LocalPlayer)
+                else
+                    Rayfield:Notify({ Title = "Server Hop", Content = "Không tìm thấy Server khả thi!", Duration = 3 })
+                end
+            end)
+        end,
+    })
+
+    MiscTab:CreateButton({
+        Name = "Server Small (Dịch chuyển đến Server ít người)",
+        Callback = function()
+            Rayfield:Notify({ Title = "Server Small", Content = "Đang tìm Server ít người nhất...", Duration = 3 })
+            pcall(function()
+                local placeId = game.PlaceId
+                local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. placeId .. "/servers/0?sortOrder=Asc&limit=100")).data
+                local targetServer = nil
+
+                table.sort(servers, function(a, b)
+                    return a.playing < b.playing
+                end)
+
+                for _, s in ipairs(servers) do
+                    if s.id ~= game.JobId and s.playing > 0 and s.playing < s.maxPlayers then
+                        targetServer = s.id
+                        break
+                    end
+                end
+
+                if targetServer then
+                    TeleportService:TeleportToPlaceInstance(placeId, targetServer, LocalPlayer)
+                else
+                    Rayfield:Notify({ Title = "Server Small", Content = "Không tìm thấy Server ít người!", Duration = 3 })
+                end
+            end)
+        end,
+    })
+
     MiscTab:CreateSection("Tính Năng Khác")
 
     MiscTab:CreateToggle({

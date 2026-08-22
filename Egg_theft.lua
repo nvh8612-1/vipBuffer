@@ -1,4 +1,4 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (AUTO EXECUTE ON TELEPORT)
+--// RAYFIELD - SCRIPT HUB BY FTGS (UPDATED HOOK LINK)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Players = game:GetService("Players")
@@ -17,7 +17,7 @@ local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 local function QueueScriptForTeleport()
     local teleportScript = [[
         task.wait(3)
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/LINK_SCRIPT_CUA_BAN_TAI_DAY.lua"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/nvh8612-1/vipBuffer/refs/heads/main/Egg_theft.lua"))()
     ]]
     
     local queueFunc = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
@@ -29,7 +29,8 @@ end
 --------------------------------------------------
 -- CẤU HÌNH KEY & FILE STORAGE
 --------------------------------------------------
-local currentKey = "2026-tjjsk"
+local currentKey = "Win1"
+local oldKey = "2026-tjjsk"
 local keyUrl = "https://link4sub.com/notes/cLCN"
 local fileName = "FTGSKey_Saved.txt"
 
@@ -53,6 +54,7 @@ local areaCFrames = {
 
 local areaGuis = {}
 local hiddenAssetsFolder = nil
+local freezeConnection = nil
 
 --------------------------------------------------
 -- HÀM XỬ LÝ FILE KEY
@@ -199,7 +201,7 @@ local function LoadMainTabs()
     })
 
     MainTab:CreateToggle({
-        Name = "Auto Zone (Lụm Trứng=Bay về Zone Tắt khi mở trứng!!!)",
+        Name = "Auto Zone (Đụng Prompt Tự Bay Về Safe Zone)",
         CurrentValue = false,
         Flag = "AutoZone",
         Callback = function(Value)
@@ -343,21 +345,40 @@ local function LoadMainTabs()
 
     -- TAB OP
     local OPTab = Window:CreateTab("OP", 4483362458)
-    OPTab:CreateButton({
-        Name = "Freeze HP (0 Máu không die)",
-        Callback = function()
-            local char = LocalPlayer.Character
-            local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-
-            if humanoid then
-                humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-                humanoid:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
-                humanoid.Health = 0
+    OPTab:CreateToggle({
+        Name = "Godmode / Bất Tử HP (Chống Die)",
+        CurrentValue = false,
+        Flag = "GodModeHP",
+        Callback = function(Value)
+            if Value then
+                if freezeConnection then freezeConnection:Disconnect() end
+                
+                freezeConnection = RunService.Heartbeat:Connect(function()
+                    pcall(function()
+                        local char = LocalPlayer.Character
+                        local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+                        if humanoid then
+                            if humanoid.Health < humanoid.MaxHealth then
+                                humanoid.Health = humanoid.MaxHealth
+                            end
+                        end
+                    end)
+                end)
 
                 Rayfield:Notify({
-                    Title = "Freeze HP",
-                    Content = "Đã đóng băng HP về 0 thành công!",
+                    Title = "Godmode HP",
+                    Content = "Đã BẬT Bất Tử Máu!",
                     Duration = 2.5
+                })
+            else
+                if freezeConnection then
+                    freezeConnection:Disconnect()
+                    freezeConnection = nil
+                end
+                Rayfield:Notify({
+                    Title = "Godmode HP",
+                    Content = "Đã TẮT Bất Tử Máu",
+                    Duration = 2
                 })
             end
         end,
@@ -497,6 +518,12 @@ local function LoadKeyTab()
 
                 CheckKeyButton:Set("Đã Xác Thực (Đã Lưu Key)")
                 LoadMainTabs()
+            elseif inputKeyText == oldKey then
+                Rayfield:Notify({
+                    Title = "Key Không Hợp Lệ 💫",
+                    Content = "Phiên Bản Này Đã Lỗi Thời ⚙️",
+                    Duration = 4
+                })
             else
                 Rayfield:Notify({
                     Title = "Thất Bại!",
@@ -542,6 +569,9 @@ task.spawn(function()
             isKeyUnlocked = true
             Rayfield:Notify({ Title = "System", Content = "Key Hợp Lệ 🎉", Duration = 3.0 })
             LoadMainTabs()
+        elseif savedKey == oldKey then
+            Rayfield:Notify({ Title = "Key Không Hợp Lệ 💫", Content = "Phiên Bản Này Đã Lỗi Thời ⚙️", Duration = 4.0 })
+            LoadKeyTab()
         else
             Rayfield:Notify({ Title = "System", Content = "Key Đã Cập Nhật Hãy Get Key Mới 💫", Duration = 2.5 })
             LoadKeyTab()

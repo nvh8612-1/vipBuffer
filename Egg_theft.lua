@@ -1,4 +1,12 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (FULL UPDATED)
+--// RAYFIELD - SCRIPT HUB BY FTGS (SINGLE INSTANCE & ANTI-SPAM HOP)
+
+-- 1. CHỐNG TRÙNG LẬP SCRIPT (SINGLE INSTANCE CHECK)
+if getgenv().FTGS_HUB_LOADED then
+    warn("FTGS HUB đã chạy sẵn! Hủy lượt thực thi trùng lặp.")
+    return
+end
+getgenv().FTGS_HUB_LOADED = true
+
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Players = game:GetService("Players")
@@ -12,12 +20,18 @@ local ProximityPromptService = game:GetService("ProximityPromptService")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
 --------------------------------------------------
--- HÀM LƯU SCRIPT ĐỂ TỰ ĐỘNG CHẠY KHI HOP SERVER
+-- HÀM LƯU SCRIPT ĐỂ TỰ ĐỘNG CHẠY KHI HOP SERVER (ĐÃ CHỐNG SPAM)
 --------------------------------------------------
+local isTeleporting = false
 local function QueueScriptForTeleport()
+    if isTeleporting then return end
+    isTeleporting = true
+
     local teleportScript = [[
-        task.wait(3)
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/nvh8612-1/vipBuffer/refs/heads/main/Egg_theft.lua"))()
+        repeat task.wait() until game:IsLoaded()
+        if not getgenv().FTGS_HUB_LOADED then
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/nvh8612-1/vipBuffer/refs/heads/main/Egg_theft.lua"))()
+        end
     ]]
     
     local queueFunc = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
@@ -41,11 +55,11 @@ local skipPromptActive = false
 local autoZoneActive = false
 local antiAFKActive = false
 local antiRagdollActive = false
-local tweenSpeed = 250
+local isInteractingPrompt = false
+local tweenSpeed = 280
 local safeZoneCFrame = CFrame.new(534.61, 70.27, -366.91, 0.051, 0, -0.999, 0, 1, 0, 0.999, 0, 0.051)
 local safeZoneGui = nil
 
--- QUẢN LÝ DỮ LIỆU TỌA ĐỘ AREA
 local areaCFrames = {
     Cosmic = CFrame.new(3392.59, 70.27, -337.56, -1.000, 0.000, 0.018, 0.000, 1.000, 0.000, -0.018, 0.000, -1.000),
     Prehistoric = CFrame.new(2813.55, 70.27, -381.25, 1.000, 0.000, 0.024, -0.000, 1.000, -0.000, -0.024, 0.000, 1.000),
@@ -73,7 +87,7 @@ local function SaveKeyToStorage(keyToSave)
 end
 
 --------------------------------------------------
--- HÀM TWEEN TẦM TRUNG (NÉ BẪY NGƯỜI CHƠI & NÉ ANTI-FLY)
+-- HÀM TWEEN SIÊU TỐC NÉ QUÁI & BYPASS ANTI-KILL
 --------------------------------------------------
 local function SmoothTween(targetCFrame, speed)
     local char = LocalPlayer.Character
@@ -81,8 +95,8 @@ local function SmoothTween(targetCFrame, speed)
     local humanoid = char and char:FindFirstChildOfClass("Humanoid")
     if not hrp or not humanoid or humanoid.Health <= 0 then return end
 
-    local safeSpeed = math.min(speed or 85, 105)
-    local trapAvoidHeight = 18 
+    local moveSpeed = speed or 280
+    local trapAvoidHeight = 14 
 
     task.spawn(function()
         local startPos = hrp.Position
@@ -92,12 +106,22 @@ local function SmoothTween(targetCFrame, speed)
         local midEndPos = Vector3.new(endPos.X, endPos.Y + trapAvoidHeight, endPos.Z)
 
         local distance = (midStartPos - midEndPos).Magnitude
-        
-        hrp.CFrame = CFrame.new(midStartPos)
-        task.wait(0.03)
+        if distance <= 2 then
+            hrp.CFrame = targetCFrame
+            return
+        end
 
-        local steps = math.max(math.floor(distance / 1.5), 1)
-        local waitTime = (distance / safeSpeed) / steps
+        pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.NoPhysics) end)
+        
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+
+        local timeToReach = distance / moveSpeed
+        local steps = math.max(math.floor(timeToReach * 60), 1)
+        local delayTime = timeToReach / steps
 
         for i = 1, steps do
             if not LocalPlayer.Character or not hrp or not humanoid or humanoid.Health <= 0 then
@@ -110,16 +134,17 @@ local function SmoothTween(targetCFrame, speed)
             local lookAtCFrame = CFrame.lookAt(currentPos, midEndPos)
             hrp.CFrame = lookAtCFrame
 
-            local directionVector = (midEndPos - midStartPos).Unit
-            hrp.AssemblyLinearVelocity = directionVector * safeSpeed
-            
-            task.wait(waitTime)
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+
+            task.wait(delayTime)
         end
 
         if hrp and humanoid and humanoid.Health > 0 then
             hrp.CFrame = targetCFrame
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
+            pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.Running) end)
         end
     end)
 end
@@ -192,7 +217,6 @@ local Window = Rayfield:CreateWindow({
 -- HÀM TẠO CÁC TAB TÍNH NĂNG
 --------------------------------------------------
 local function LoadMainTabs()
-    -- TAB MAIN
     local MainTab = Window:CreateTab("Main", 4483362458)
 
     MainTab:CreateSection("Chức năng cơ bản")
@@ -205,7 +229,7 @@ local function LoadMainTabs()
             antiRagdollActive = Value
             Rayfield:Notify({
                 Title = "Super Mode",
-                Content = Value and "Đã BẬT Super Mode (Kháng ngục & Hất tung) 🚀" or "Đã TẮT Super Mode",
+                Content = Value and "Đã BẬT Super Mode 🚀" or "Đã TẮT Super Mode",
                 Duration = 2.5
             })
         end,
@@ -244,10 +268,10 @@ local function LoadMainTabs()
 
     MainTab:CreateSlider({
         Name = "Tốc độ bay (Tween Speed)",
-        Range = {50, 600},
+        Range = {100, 600},
         Increment = 10,
         Suffix = "Studs/s",
-        CurrentValue = 250,
+        CurrentValue = 280,
         Flag = "TweenSpeed",
         Callback = function(Value)
             tweenSpeed = Value
@@ -384,11 +408,7 @@ local function LoadMainTabs()
         Flag = "AntiRagdoll",
         Callback = function(Value)
             antiRagdollActive = Value
-            Rayfield:Notify({ 
-                Title = "Anti-Ragdoll", 
-                Content = Value and "Đã BẬT (Không bị ngục/văng)" or "Đã TẮT", 
-                Duration = 2 
-            })
+            Rayfield:Notify({ Title = "Anti-Ragdoll", Content = Value and "Đã BẬT" or "Đã TẮT", Duration = 2 })
         end,
     })
 
@@ -463,9 +483,7 @@ local function LoadMainTabs()
                 local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. placeId .. "/servers/0?sortOrder=Asc&limit=100")).data
                 local targetServer = nil
 
-                table.sort(servers, function(a, b)
-                    return a.playing < b.playing
-                end)
+                table.sort(servers, function(a, b) return a.playing < b.playing end)
 
                 for _, s in ipairs(servers) do
                     if s.id ~= game.JobId and s.playing > 0 and s.playing < s.maxPlayers then
@@ -489,16 +507,13 @@ end
 --------------------------------------------------
 local function LoadKeyTab()
     local KeyTab = Window:CreateTab("Key", 4483362458)
-
     KeyTab:CreateSection("Hệ Thống Xác Thực Key")
 
     KeyTab:CreateInput({
         Name = "Nhập Key tại đây",
         PlaceholderText = "Dán mã Key của bạn vào đây...",
         RemoveTextAfterFocusLost = false,
-        Callback = function(Text)
-            inputKeyText = Text
-        end,
+        Callback = function(Text) inputKeyText = Text end,
     })
 
     local CheckKeyButton
@@ -514,26 +529,13 @@ local function LoadKeyTab()
                 isKeyUnlocked = true
                 SaveKeyToStorage(currentKey)
                 
-                Rayfield:Notify({
-                    Title = "Thành Công!",
-                    Content = "Key chính xác 🎉 Đã lưu Key!",
-                    Duration = 3
-                })
-
+                Rayfield:Notify({ Title = "Thành Công!", Content = "Key chính xác 🎉 Đã lưu Key!", Duration = 3 })
                 CheckKeyButton:Set("Đã Xác Thực (Đã Lưu Key)")
                 LoadMainTabs()
             elseif inputKeyText == oldKey then
-                Rayfield:Notify({
-                    Title = "Key Không Hợp Lệ 💫",
-                    Content = "Phiên Bản Này Đã Lỗi Thời ⚙️",
-                    Duration = 4
-                })
+                Rayfield:Notify({ Title = "Key Không Hợp Lệ 💫", Content = "Phiên Bản Này Đã Lỗi Thời ⚙️", Duration = 4 })
             else
-                Rayfield:Notify({
-                    Title = "Thất Bại!",
-                    Content = "Key không chính xác, vui lòng thử lại!",
-                    Duration = 2.5
-                })
+                Rayfield:Notify({ Title = "Thất Bại!", Content = "Key không chính xác, vui lòng thử lại!", Duration = 2.5 })
             end
         end,
     })
@@ -543,11 +545,7 @@ local function LoadKeyTab()
         Callback = function()
             if setclipboard then
                 setclipboard(keyUrl)
-                Rayfield:Notify({
-                    Title = "Get Key",
-                    Content = "Đã sao chép Link lấy Key!",
-                    Duration = 3
-                })
+                Rayfield:Notify({ Title = "Get Key", Content = "Đã sao chép Link lấy Key!", Duration = 3 })
             end
         end,
     })
@@ -586,10 +584,8 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- LOGIC PROXIMITY PROMPT: AUTO TWEEN TẦM TRUNG & FIRE UNTIL GONE
+-- LOGIC PROXIMITY PROMPT
 --------------------------------------------------
-local isInteractingPrompt = false
-
 local function TriggerPrompt(prompt)
     if fireproximityprompt then
         fireproximityprompt(prompt)
@@ -648,45 +644,23 @@ ProximityPromptService.PromptButtonHoldBegan:Connect(function(prompt, playerWhoT
 end)
 
 --------------------------------------------------
--- LOGIC ANTI-KNOCKBACK & ANTI-RAGDOLL
+-- LOGIC ANTI-RAGDOLL (BẢN NHỆ)
 --------------------------------------------------
 RunService.Stepped:Connect(function()
-    if not antiRagdollActive then return end
+    if not antiRagdollActive or isInteractingPrompt then return end
 
     local char = LocalPlayer.Character
     if not char then return end
 
     local humanoid = char:FindFirstChildOfClass("Humanoid")
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-
     if humanoid then
-        humanoid.PlatformStand = false
-        humanoid.Sit = false
-
         local state = humanoid:GetState()
-        if state == Enum.HumanoidStateType.Ragdoll 
-            or state == Enum.HumanoidStateType.FallingDown 
-            or state == Enum.HumanoidStateType.Physics then
-            
-            humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-        end
-    end
-
-    if hrp then
-        for _, child in ipairs(hrp:GetChildren()) do
-            if child:IsA("BodyVelocity") 
-                or child:IsA("BodyThrust") 
-                or child:IsA("BodyForce") 
-                or child:IsA("LinearVelocity") 
-                or child:IsA("VectorForce") then
-                
-                child:Destroy()
-            end
-        end
-
-        if hrp.AssemblyLinearVelocity.Magnitude > 100 then
-            hrp.AssemblyLinearVelocity = Vector3.zero
-            hrp.AssemblyAngularVelocity = Vector3.zero
+        if state == Enum.HumanoidStateType.Ragdoll or state == Enum.HumanoidStateType.FallingDown then
+            pcall(function()
+                humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+                humanoid.PlatformStand = false
+                humanoid.Sit = false
+            end)
         end
     end
 end)
@@ -721,10 +695,7 @@ task.spawn(function()
                         end
 
                         humanoid.MoveVector = Vector3.new(0, 0, -1)
-                        pcall(function()
-                            humanoid.InputMoveVector = Vector3.new(0, 0, -1)
-                        end)
-
+                        pcall(function() humanoid.InputMoveVector = Vector3.new(0, 0, -1) end)
                         humanoid:Move(Vector3.new(0, 0, -1), true)
 
                         RunService.RenderStepped:Wait()
@@ -734,9 +705,7 @@ task.spawn(function()
                         MasterControl.moveFunction(LocalPlayer, Vector3.new(0, 0, 0), false)
                     end
                     humanoid.MoveVector = Vector3.new(0, 0, 0)
-                    pcall(function()
-                        humanoid.InputMoveVector = Vector3.new(0, 0, 0)
-                    end)
+                    pcall(function() humanoid.InputMoveVector = Vector3.new(0, 0, 0) end)
                     humanoid:Move(Vector3.new(0, 0, 0), false)
                 end
             end)

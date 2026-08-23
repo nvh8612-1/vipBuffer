@@ -632,24 +632,25 @@ local function LoadKeyTab()
 
     local CheckKeyButton
     CheckKeyButton = KeyTab:CreateButton({
-        Name = "Check Key",
+        Name = "Check Key ...",
         Callback = function()
             if isKeyUnlocked then
-                Rayfield:Notify({ Title = "Key System", Content = "Key đã được kích hoạt!", Duration = 2 })
+                Rayfield:Notify({ Title = "System", Content = "Key Hợp Lệ 🎉", Duration = 2 })
                 return
             end
+
+            Rayfield:Notify({ Title = "System", Content = "Track key ...", Duration = 1.5 })
+            task.wait(1.5)
 
             if inputKeyText == currentKey then
                 isKeyUnlocked = true
                 SaveKeyToStorage(currentKey)
                 
-                Rayfield:Notify({ Title = "Thành Công!", Content = "Key chính xác 🎉 Đã lưu Key!", Duration = 3 })
+                Rayfield:Notify({ Title = "System", Content = "Key Hợp Lệ 🎉", Duration = 3 })
                 CheckKeyButton:Set("Đã Xác Thực (Đã Lưu Key)")
                 LoadMainTabs()
-            elseif inputKeyText == oldKey then
-                Rayfield:Notify({ Title = "Key Không Hợp Lệ 💫", Content = "Phiên Bản Này Đã Lỗi Thời ⚙️", Duration = 4 })
             else
-                Rayfield:Notify({ Title = "Thất Bại!", Content = "Key không chính xác, vui lòng thử lại!", Duration = 2.5 })
+                Rayfield:Notify({ Title = "System", Content = "Key Không Hợp Lệ 💫", Duration = 3 })
             end
         end,
     })
@@ -672,24 +673,15 @@ task.spawn(function()
     local savedKey = GetSavedKey()
 
     if savedKey then
-        Rayfield:Notify({ Title = "System", Content = "Đang Track Key 3..", Duration = 0.9 })
-        task.wait(1.1)
-
-        Rayfield:Notify({ Title = "System", Content = "Đang Track Key 2..", Duration = 0.9 })
-        task.wait(1.1)
-
-        Rayfield:Notify({ Title = "System", Content = "Đang Track Key 1..", Duration = 0.9 })
-        task.wait(1.1)
+        Rayfield:Notify({ Title = "System", Content = "Track key ...", Duration = 1.5 })
+        task.wait(1.5)
 
         if savedKey == currentKey then
             isKeyUnlocked = true
             Rayfield:Notify({ Title = "System", Content = "Key Hợp Lệ 🎉", Duration = 3.0 })
             LoadMainTabs()
-        elseif savedKey == oldKey then
-            Rayfield:Notify({ Title = "Key Không Hợp Lệ 💫", Content = "Phiên Bản Này Đã Lỗi Thời ⚙️", Duration = 4.0 })
-            LoadKeyTab()
         else
-            Rayfield:Notify({ Title = "System", Content = "Key Đã Cập Nhật Hãy Get Key Mới 💫", Duration = 2.5 })
+            Rayfield:Notify({ Title = "System", Content = "Key Không Hợp Lệ 💫", Duration = 3.0 })
             LoadKeyTab()
         end
     else

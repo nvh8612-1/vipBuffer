@@ -54,7 +54,7 @@ local isInteractingPrompt = false
 
 -- Cấu hình Tween
 local tweenSpeed = 120
-local chunkSize = 38 -- Mặc định MAX 38 studs/chunk
+local chunkSize = 3 -- Mặc định đã đổi thành 3 studs/chunk
 
 -- TỌA ĐỘ CHUẨN
 local safeZoneCFrame = CFrame.new(519.01, 70.27, -362.74)
@@ -124,7 +124,7 @@ local function SmoothTween(targetCFrame, speed)
             end
         end
 
-        -- Chia chặng theo chunkSize (Tối đa 38 studs)
+        -- Chia chặng theo chunkSize
         local numSteps = math.max(1, math.floor(totalDistance / chunkSize))
         local direction = (endPos - startPos).Unit
         local currentRotation = hrp.CFrame - hrp.CFrame.Position
@@ -288,7 +288,7 @@ local function LoadMainTabs()
     })
 
     MainTab:CreateSlider({
-        Name = "Chunk Size (Khoảng cách mỗi nấc MAX 38)",
+        Name = "Chunk Size (Khoản Cách Chunk Roblox)",
         Range = {2, 38},
         Increment = 1,
         Suffix = "Studs/chunk",

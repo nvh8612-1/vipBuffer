@@ -1,6 +1,5 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (ANTI-SPAM HOP & ULTRA-SMOOTH TWEEN)
+--// RAYFIELD - SCRIPT HUB BY FTGS (STEP-BY-STEP FLYING - ANTI-KILL FIX)
 
--- 1. CHỐNG TRÙNG LẬP SCRIPT TỪ VÒNG GỬI XE (SINGLE INSTANCE CHECK)
 if getgenv().FTGS_HUB_LOADED then
     warn("FTGS HUB đã chạy sẵn! Hủy lượt thực thi trùng lặp.")
     return
@@ -20,7 +19,7 @@ local ProximityPromptService = game:GetService("ProximityPromptService")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
 --------------------------------------------------
--- HÀM LƯU SCRIPT ĐỂ TỰ ĐỘNG CHẠY KHI HOP SERVER (CHỐNG SPAM)
+-- HÀM LƯU SCRIPT KHI HOP SERVER
 --------------------------------------------------
 local isTeleporting = false
 local function QueueScriptForTeleport()
@@ -87,10 +86,66 @@ local function SaveKeyToStorage(keyToSave)
 end
 
 --------------------------------------------------
--- HÀM TWEEN CHỐNG GIẬT / CHỐNG TELE NGƯỢC / NÉ QUÁI (HEARTBEAT)
+-- HÀM TWEEN CHIA ĐOẠN 0.5S (NÉ ANTI-CHEAT KILL 100%)
 --------------------------------------------------
 local tweeningThread = nil
 
+-- Hàm bay 1 đoạn ngắn đơn lẻ
+local function SingleSegmentTween(startCFrame, targetCFrame, speed)
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not humanoid or humanoid.Health <= 0 then return false end
+
+    local distance = (startCFrame.Position - targetCFrame.Position).Magnitude
+    if distance <= 2 then
+        hrp.CFrame = targetCFrame
+        return true
+    end
+
+    local bv = Instance.new("BodyVelocity")
+    bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+    bv.Velocity = Vector3.zero
+    bv.Parent = hrp
+
+    local timeToReach = distance / speed
+    local startTime = os.clock()
+
+    while os.clock() - startTime < timeToReach do
+        if not LocalPlayer.Character or not hrp or not humanoid or humanoid.Health <= 0 then
+            if bv then bv:Destroy() end
+            return false
+        end
+
+        pcall(function()
+            humanoid:ChangeState(Enum.HumanoidStateType.NoPhysics)
+        end)
+        for _, part in ipairs(char:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+
+        local elapsed = os.clock() - startTime
+        local alpha = math.clamp(elapsed / timeToReach, 0, 1)
+
+        local currentPos = startCFrame.Position:Lerp(targetCFrame.Position, alpha)
+        hrp.CFrame = CFrame.lookAt(currentPos, targetCFrame.Position)
+
+        RunService.Heartbeat:Wait()
+    end
+
+    if bv then bv:Destroy() end
+
+    if hrp and humanoid and humanoid.Health > 0 then
+        hrp.CFrame = targetCFrame
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+    end
+    return true
+end
+
+-- Hàm quản lý toàn bộ quá trình bay chia đoạn + nghỉ 0.5s
 local function SmoothTween(targetCFrame, speed)
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -104,60 +159,70 @@ local function SmoothTween(targetCFrame, speed)
 
     tweeningThread = task.spawn(function()
         local moveSpeed = speed or 280
-        local trapAvoidHeight = 15
+        local maxSegmentDistance = 450 -- Khoảng cách tối đa mỗi lần bay (Dưới ngưỡng Anti-cheat)
+        local trapAvoidHeight = 15     -- Chiều cao nâng lên né bẫy
 
         local startPos = hrp.Position
         local endPos = targetCFrame.Position
 
-        local midStartPos = Vector3.new(startPos.X, startPos.Y + trapAvoidHeight, startPos.Z)
-        local midEndPos = Vector3.new(endPos.X, endPos.Y + trapAvoidHeight, endPos.Z)
-
-        local totalDistance = (midStartPos - midEndPos).Magnitude
-        if totalDistance <= 2 then
-            hrp.CFrame = targetCFrame
-            return
-        end
-
-        local bv = Instance.new("BodyVelocity")
-        bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-        bv.Velocity = Vector3.zero
-        bv.Parent = hrp
-
-        local timeToReach = totalDistance / moveSpeed
-        local startTime = os.clock()
-
-        while os.clock() - startTime < timeToReach do
-            if not LocalPlayer.Character or not hrp or not humanoid or humanoid.Health <= 0 then
-                break
+        local totalDistance = (startPos - endPos).Magnitude
+        
+        -- Nếu khoảng cách quá ngắn thì bay thẳng 1 mạch
+        if totalDistance <= maxSegmentDistance then
+            local startCF = CFrame.new(startPos.X, startPos.Y + trapAvoidHeight, startPos.Z)
+            local endCF = CFrame.new(endPos.X, endPos.Y + trapAvoidHeight, endPos.Z)
+            
+            SingleSegmentTween(startCF, endCF, moveSpeed)
+            if hrp and humanoid and humanoid.Health > 0 then
+                hrp.CFrame = targetCFrame
             end
+        else
+            -- Nếu khoảng cách xa: Chia thành nhiều chặng
+            local numSegments = math.ceil(totalDistance / maxSegmentDistance)
+            
+            for i = 1, numSegments do
+                if not LocalPlayer.Character or not hrp or not humanoid or humanoid.Health <= 0 then
+                    break
+                end
 
-            pcall(function()
-                humanoid:ChangeState(Enum.HumanoidStateType.NoPhysics)
-            end)
-            for _, part in ipairs(char:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
+                local alphaStart = (i - 1) / numSegments
+                local alphaEnd = i / numSegments
+
+                local segStartPos = startPos:Lerp(endPos, alphaStart)
+                local segEndPos = startPos:Lerp(endPos, alphaEnd)
+
+                local segStartCF = CFrame.new(segStartPos.X, segStartPos.Y + trapAvoidHeight, segStartPos.Z)
+                local segEndCF = CFrame.new(segEndPos.X, segEndPos.Y + trapAvoidHeight, segEndPos.Z)
+
+                -- 1. Bay chặng thứ i
+                local success = SingleSegmentTween(segStartCF, segEndCF, moveSpeed)
+                if not success then break end
+
+                -- 2. Đặt chân xuống mặt đất tạm thời để Server lưuCheckpoint vị trí
+                if hrp and humanoid and humanoid.Health > 0 then
+                    hrp.CFrame = CFrame.new(segEndPos)
+                    hrp.AssemblyLinearVelocity = Vector3.zero
+                    hrp.AssemblyAngularVelocity = Vector3.zero
+                    pcall(function()
+                        humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+                    end)
+                end
+
+                -- 3. Nghỉ 0.5s trước khi bay chặng tiếp theo (Nếu chưa phải chặng cuối)
+                if i < numSegments then
+                    task.wait(0.5)
                 end
             end
 
-            local elapsed = os.clock() - startTime
-            local alpha = math.clamp(elapsed / timeToReach, 0, 1)
-
-            local currentPos = midStartPos:Lerp(midEndPos, alpha)
-            hrp.CFrame = CFrame.lookAt(currentPos, midEndPos)
-
-            RunService.Heartbeat:Wait()
-        end
-
-        if bv then bv:Destroy() end
-
-        if hrp and humanoid and humanoid.Health > 0 then
-            hrp.CFrame = targetCFrame
-            hrp.AssemblyLinearVelocity = Vector3.zero
-            hrp.AssemblyAngularVelocity = Vector3.zero
-            pcall(function()
-                humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-            end)
+            -- Đã tới đích hoàn toàn
+            if hrp and humanoid and humanoid.Health > 0 then
+                hrp.CFrame = targetCFrame
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
+                pcall(function()
+                    humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+                end)
+            end
         end
         tweeningThread = nil
     end)

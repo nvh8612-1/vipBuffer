@@ -1,4 +1,4 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (FIXED GODMODE)
+--// RAYFIELD - SCRIPT HUB BY FTGS (FULL UPDATED)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Players = game:GetService("Players")
@@ -40,6 +40,7 @@ local isKeyUnlocked = false
 local skipPromptActive = false
 local autoZoneActive = false
 local antiAFKActive = false
+local antiRagdollActive = false
 local tweenSpeed = 250
 local safeZoneCFrame = CFrame.new(534.61, 70.27, -366.91, 0.051, 0, -0.999, 0, 1, 0, 0.999, 0, 0.051)
 local safeZoneGui = nil
@@ -54,8 +55,6 @@ local areaCFrames = {
 
 local areaGuis = {}
 local hiddenAssetsFolder = nil
-local godmodeActive = false
-local touchConnections = {}
 
 --------------------------------------------------
 -- HÀM XỬ LÝ FILE KEY
@@ -74,37 +73,53 @@ local function SaveKeyToStorage(keyToSave)
 end
 
 --------------------------------------------------
--- HÀM TWEEN MƯỢT
+-- HÀM TWEEN TẦM TRUNG (NÉ BẪY NGƯỜI CHƠI & NÉ ANTI-FLY)
 --------------------------------------------------
 local function SmoothTween(targetCFrame, speed)
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not humanoid or humanoid.Health <= 0 then return end
 
-    local startCFrame = hrp.CFrame
-    local distance = (startCFrame.Position - targetCFrame.Position).Magnitude
-    local duration = distance / (speed or 250)
-    
-    if duration <= 0 then return end
+    local safeSpeed = math.min(speed or 85, 105)
+    local trapAvoidHeight = 18 
 
-    local startTime = os.clock()
-    local conn
+    task.spawn(function()
+        local startPos = hrp.Position
+        local endPos = targetCFrame.Position
+        
+        local midStartPos = Vector3.new(startPos.X, startPos.Y + trapAvoidHeight, startPos.Z)
+        local midEndPos = Vector3.new(endPos.X, endPos.Y + trapAvoidHeight, endPos.Z)
 
-    conn = RunService.RenderStepped:Connect(function()
-        if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            conn:Disconnect()
-            return
+        local distance = (midStartPos - midEndPos).Magnitude
+        
+        hrp.CFrame = CFrame.new(midStartPos)
+        task.wait(0.03)
+
+        local steps = math.max(math.floor(distance / 1.5), 1)
+        local waitTime = (distance / safeSpeed) / steps
+
+        for i = 1, steps do
+            if not LocalPlayer.Character or not hrp or not humanoid or humanoid.Health <= 0 then
+                break
+            end
+
+            local alpha = i / steps
+            local currentPos = midStartPos:Lerp(midEndPos, alpha)
+            
+            local lookAtCFrame = CFrame.lookAt(currentPos, midEndPos)
+            hrp.CFrame = lookAtCFrame
+
+            local directionVector = (midEndPos - midStartPos).Unit
+            hrp.AssemblyLinearVelocity = directionVector * safeSpeed
+            
+            task.wait(waitTime)
         end
 
-        local elapsed = os.clock() - startTime
-        local alpha = math.clamp(elapsed / duration, 0, 1)
-
-        hrp.CFrame = startCFrame:Lerp(targetCFrame, alpha)
-        hrp.AssemblyLinearVelocity = Vector3.zero
-        hrp.AssemblyAngularVelocity = Vector3.zero
-
-        if alpha >= 1 then
-            conn:Disconnect()
+        if hrp and humanoid and humanoid.Health > 0 then
+            hrp.CFrame = targetCFrame
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
         end
     end)
 end
@@ -180,10 +195,24 @@ local function LoadMainTabs()
     -- TAB MAIN
     local MainTab = Window:CreateTab("Main", 4483362458)
 
-    MainTab:CreateSection("Tính Năng Cơ Bản")
+    MainTab:CreateSection("Chức năng cơ bản")
 
     MainTab:CreateToggle({
-        Name = "Skip Prompt (Bỏ qua nhặt ngay lập tức)",
+        Name = "Super Mode (Bật Anti-Ragdoll & Tối ưu tốc độ farm)",
+        CurrentValue = false,
+        Flag = "SuperMode",
+        Callback = function(Value)
+            antiRagdollActive = Value
+            Rayfield:Notify({
+                Title = "Super Mode",
+                Content = Value and "Đã BẬT Super Mode (Kháng ngục & Hất tung) 🚀" or "Đã TẮT Super Mode",
+                Duration = 2.5
+            })
+        end,
+    })
+
+    MainTab:CreateToggle({
+        Name = "Skip Prompt (Bỏ qua thời gian giữ phím nhặt)",
         CurrentValue = false,
         Flag = "SkipPrompt",
         Callback = function(Value)
@@ -202,7 +231,7 @@ local function LoadMainTabs()
     })
 
     MainTab:CreateToggle({
-        Name = "Auto Zone (Đụng Prompt Tự Bay Về Safe Zone)",
+        Name = "Auto Zone (Nhặt xong tự bay về Safe Zone)",
         CurrentValue = false,
         Flag = "AutoZone",
         Callback = function(Value)
@@ -344,52 +373,59 @@ local function LoadMainTabs()
         end,
     })
 
-    -- TAB OP
-    local OPTab = Window:CreateTab("OP", 4483362458)
-    OPTab:CreateToggle({
-        Name = "Bỏ Qua Va Chạm Sát Thương (No-Touch Damage)",
+    -- TAB MISC
+    local MiscTab = Window:CreateTab("Misc", 4483362458)
+    
+    MiscTab:CreateSection("Tính Năng Hỗ Trợ")
+
+    MiscTab:CreateToggle({
+        Name = "Anti-Knockback / Anti-Ragdoll (Chống Nằm & Hất Tung)",
         CurrentValue = false,
-        Flag = "GodModeTouch",
+        Flag = "AntiRagdoll",
         Callback = function(Value)
-            godmodeActive = Value
+            antiRagdollActive = Value
+            Rayfield:Notify({ 
+                Title = "Anti-Ragdoll", 
+                Content = Value and "Đã BẬT (Không bị ngục/văng)" or "Đã TẮT", 
+                Duration = 2 
+            })
+        end,
+    })
+
+    MiscTab:CreateToggle({
+        Name = "Anti-AFK (Giả Lập Joystick 3 Cách)",
+        CurrentValue = false,
+        Flag = "AntiAFK",
+        Callback = function(Value)
+            antiAFKActive = Value
+            Rayfield:Notify({ Title = "Anti-AFK", Content = Value and "Đã BẬT" or "Đã TẮT", Duration = 2 })
+        end,
+    })
+
+    MiscTab:CreateToggle({
+        Name = "Ẩn Toàn bộ Pet",
+        CurrentValue = false,
+        Flag = "HideAllPets",
+        Callback = function(Value)
             if Value then
-                pcall(function()
-                    local char = LocalPlayer.Character
-                    if char then
-                        for _, part in ipairs(char:GetDescendants()) do
-                            if part:IsA("BasePart") then
-                                part.CanTouch = false
-                            end
-                        end
-                    end
-                end)
-                Rayfield:Notify({
-                    Title = "Godmode",
-                    Content = "Đã BẬT Bỏ Qua Va Chạm Sát Thương!",
-                    Duration = 2.5
-                })
+                local assets = Workspace:FindFirstChild("ClientRenderedAssets")
+                if assets then
+                    hiddenAssetsFolder = assets
+                    hiddenAssetsFolder.Parent = nil
+                    Rayfield:Notify({ Title = "Misc", Content = "Đã ẨN Toàn bộ Pet", Duration = 2 })
+                else
+                    Rayfield:Notify({ Title = "Lỗi", Content = "Không tìm thấy ClientRenderedAssets!", Duration = 2.5 })
+                end
             else
-                pcall(function()
-                    local char = LocalPlayer.Character
-                    if char then
-                        for _, part in ipairs(char:GetDescendants()) do
-                            if part:IsA("BasePart") then
-                                part.CanTouch = true
-                            end
-                        end
-                    end
-                end)
-                Rayfield:Notify({
-                    Title = "Godmode",
-                    Content = "Đã TẮT Godmode",
-                    Duration = 2
-                })
+                if hiddenAssetsFolder then
+                    hiddenAssetsFolder.Parent = Workspace
+                    hiddenAssetsFolder = nil
+                    Rayfield:Notify({ Title = "Misc", Content = "Đã HIỆN LẠI Toàn bộ Pet", Duration = 2 })
+                end
             end
         end,
     })
 
-    -- TAB MISC
-    local MiscTab = Window:CreateTab("Misc", 4483362458)
     MiscTab:CreateSection("Chuyển Server")
 
     MiscTab:CreateButton({
@@ -444,42 +480,6 @@ local function LoadMainTabs()
                     Rayfield:Notify({ Title = "Server Small", Content = "Không tìm thấy Server ít người!", Duration = 3 })
                 end
             end)
-        end,
-    })
-
-    MiscTab:CreateSection("Tính Năng Khác")
-
-    MiscTab:CreateToggle({
-        Name = "Anti-AFK (Giả Lập Joystick 3 Cách)",
-        CurrentValue = false,
-        Flag = "AntiAFK",
-        Callback = function(Value)
-            antiAFKActive = Value
-            Rayfield:Notify({ Title = "Anti-AFK", Content = Value and "Đã BẬT" or "Đã TẮT", Duration = 2 })
-        end,
-    })
-
-    MiscTab:CreateToggle({
-        Name = "Ẩn Toàn bộ Pet",
-        CurrentValue = false,
-        Flag = "HideAllPets",
-        Callback = function(Value)
-            if Value then
-                local assets = Workspace:FindFirstChild("ClientRenderedAssets")
-                if assets then
-                    hiddenAssetsFolder = assets
-                    hiddenAssetsFolder.Parent = nil
-                    Rayfield:Notify({ Title = "Misc", Content = "Đã ẨN Toàn bộ Pet", Duration = 2 })
-                else
-                    Rayfield:Notify({ Title = "Lỗi", Content = "Không tìm thấy ClientRenderedAssets!", Duration = 2.5 })
-                end
-            else
-                if hiddenAssetsFolder then
-                    hiddenAssetsFolder.Parent = Workspace
-                    hiddenAssetsFolder = nil
-                    Rayfield:Notify({ Title = "Misc", Content = "Đã HIỆN LẠI Toàn bộ Pet", Duration = 2 })
-                end
-            end
         end,
     })
 end
@@ -586,24 +586,113 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- LOGIC PROXIMITY PROMPT & AUTO ZONE
+-- LOGIC PROXIMITY PROMPT: AUTO TWEEN TẦM TRUNG & FIRE UNTIL GONE
 --------------------------------------------------
+local isInteractingPrompt = false
+
+local function TriggerPrompt(prompt)
+    if fireproximityprompt then
+        fireproximityprompt(prompt)
+    elseif prompt.InputHoldBegin then
+        prompt:InputHoldBegin()
+        task.wait(prompt.HoldDuration)
+        prompt:InputHoldEnd()
+    end
+end
+
 Workspace.DescendantAdded:Connect(function(descendant)
     if skipPromptActive and descendant:IsA("ProximityPrompt") then
         pcall(function() descendant.HoldDuration = 0 end)
     end
 end)
 
-ProximityPromptService.PromptTriggered:Connect(function(prompt, playerWhoTriggered)
-    if autoZoneActive and playerWhoTriggered == LocalPlayer then
-        task.spawn(function()
+ProximityPromptService.PromptButtonHoldBegan:Connect(function(prompt, playerWhoTriggered)
+    if playerWhoTriggered ~= LocalPlayer or isInteractingPrompt then return end
+    
+    local promptParent = prompt.Parent
+    if not promptParent then return end
+
+    local targetCFrame = nil
+    if promptParent:IsA("BasePart") then
+        targetCFrame = promptParent.CFrame
+    elseif promptParent:IsA("Model") and promptParent.PrimaryPart then
+        targetCFrame = promptParent.PrimaryPart.CFrame
+    else
+        local part = promptParent:FindFirstChildWhichIsA("BasePart")
+        if part then targetCFrame = part.CFrame end
+    end
+
+    if not targetCFrame then return end
+
+    isInteractingPrompt = true
+
+    task.spawn(function()
+        SmoothTween(targetCFrame * CFrame.new(0, 1.5, 0), tweenSpeed)
+        task.wait(0.05)
+
+        while prompt and prompt.Parent and prompt.Enabled and isInteractingPrompt do
+            local char = LocalPlayer.Character
+            local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+            if not humanoid or humanoid.Health <= 0 then break end
+
+            TriggerPrompt(prompt)
+            task.wait(0.03)
+        end
+
+        if autoZoneActive then
             SmoothTween(safeZoneCFrame, tweenSpeed)
-        end)
+        end
+
+        isInteractingPrompt = false
+    end)
+end)
+
+--------------------------------------------------
+-- LOGIC ANTI-KNOCKBACK & ANTI-RAGDOLL
+--------------------------------------------------
+RunService.Stepped:Connect(function()
+    if not antiRagdollActive then return end
+
+    local char = LocalPlayer.Character
+    if not char then return end
+
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+
+    if humanoid then
+        humanoid.PlatformStand = false
+        humanoid.Sit = false
+
+        local state = humanoid:GetState()
+        if state == Enum.HumanoidStateType.Ragdoll 
+            or state == Enum.HumanoidStateType.FallingDown 
+            or state == Enum.HumanoidStateType.Physics then
+            
+            humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+        end
+    end
+
+    if hrp then
+        for _, child in ipairs(hrp:GetChildren()) do
+            if child:IsA("BodyVelocity") 
+                or child:IsA("BodyThrust") 
+                or child:IsA("BodyForce") 
+                or child:IsA("LinearVelocity") 
+                or child:IsA("VectorForce") then
+                
+                child:Destroy()
+            end
+        end
+
+        if hrp.AssemblyLinearVelocity.Magnitude > 100 then
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+        end
     end
 end)
 
 --------------------------------------------------
--- LOGIC ANTI-AFK (KẾT HỢP 3 CÁCH)
+-- LOGIC ANTI-AFK
 --------------------------------------------------
 task.spawn(function()
     local PlayerScripts = LocalPlayer:WaitForChild("PlayerScripts")

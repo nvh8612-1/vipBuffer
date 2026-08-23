@@ -1,4 +1,4 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (STEP-BY-STEP FLYING - ANTI-KILL FIX)
+--// RAYFIELD - SCRIPT HUB BY FTGS (SKY-WALK 1.8X HEIGHT + ANTI-KILL RESET)
 
 if getgenv().FTGS_HUB_LOADED then
     warn("FTGS HUB đã chạy sẵn! Hủy lượt thực thi trùng lặp.")
@@ -55,7 +55,7 @@ local autoZoneActive = false
 local antiAFKActive = false
 local antiRagdollActive = false
 local isInteractingPrompt = false
-local tweenSpeed = 280
+local tweenSpeed = 120
 local safeZoneCFrame = CFrame.new(534.61, 70.27, -366.91, 0.051, 0, -0.999, 0, 1, 0, 0.999, 0, 0.051)
 local safeZoneGui = nil
 
@@ -86,20 +86,43 @@ local function SaveKeyToStorage(keyToSave)
 end
 
 --------------------------------------------------
--- HÀM TWEEN CHIA ĐOẠN 0.5S (NÉ ANTI-CHEAT KILL 100%)
+-- HÀM TẠO SÀN TRÊN KHÔNG TÀNG HÌNH (INVISIBLE GROUND PLATFORM)
+--------------------------------------------------
+local skyPlatform = nil
+local function UpdateSkyPlatform(position)
+    if not skyPlatform or not skyPlatform.Parent then
+        skyPlatform = Instance.new("Part")
+        skyPlatform.Name = "FTGS_SkyWalkPlatform"
+        skyPlatform.Size = Vector3.new(15, 1, 15)
+        skyPlatform.Transparency = 1
+        skyPlatform.Anchored = true
+        skyPlatform.CanCollide = true
+        skyPlatform.Parent = Workspace
+    end
+    skyPlatform.CFrame = CFrame.new(position - Vector3.new(0, 3.2, 0))
+end
+
+local function RemoveSkyPlatform()
+    if skyPlatform then
+        skyPlatform:Destroy()
+        skyPlatform = nil
+    end
+end
+
+--------------------------------------------------
+-- HÀM SKY-WALK 1.8X ĐỘ CAO (BYPASS SERVER KILL RESET)
 --------------------------------------------------
 local tweeningThread = nil
 
--- Hàm bay 1 đoạn ngắn đơn lẻ
-local function SingleSegmentTween(startCFrame, targetCFrame, speed)
+local function SingleSegmentSkyWalk(startPos, targetPos, speed)
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     local humanoid = char and char:FindFirstChildOfClass("Humanoid")
     if not hrp or not humanoid or humanoid.Health <= 0 then return false end
 
-    local distance = (startCFrame.Position - targetCFrame.Position).Magnitude
+    local distance = (startPos - targetPos).Magnitude
     if distance <= 2 then
-        hrp.CFrame = targetCFrame
+        hrp.CFrame = CFrame.new(targetPos)
         return true
     end
 
@@ -114,38 +137,30 @@ local function SingleSegmentTween(startCFrame, targetCFrame, speed)
     while os.clock() - startTime < timeToReach do
         if not LocalPlayer.Character or not hrp or not humanoid or humanoid.Health <= 0 then
             if bv then bv:Destroy() end
+            RemoveSkyPlatform()
             return false
-        end
-
-        pcall(function()
-            humanoid:ChangeState(Enum.HumanoidStateType.NoPhysics)
-        end)
-        for _, part in ipairs(char:GetChildren()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
         end
 
         local elapsed = os.clock() - startTime
         local alpha = math.clamp(elapsed / timeToReach, 0, 1)
 
-        local currentPos = startCFrame.Position:Lerp(targetCFrame.Position, alpha)
-        hrp.CFrame = CFrame.lookAt(currentPos, targetCFrame.Position)
+        local currentPos = startPos:Lerp(targetPos, alpha)
+        hrp.CFrame = CFrame.lookAt(currentPos, targetPos)
+
+        -- Tạo sàn tàng hình di chuyển theo chân
+        UpdateSkyPlatform(currentPos)
+
+        -- Ép trạng thái Humanoid đang đi bộ để tránh bị tính là đang rơi/lơ lửng
+        humanoid:ChangeState(Enum.HumanoidStateType.RunningNoPhysics)
+        humanoid:MoveTo(targetPos)
 
         RunService.Heartbeat:Wait()
     end
 
     if bv then bv:Destroy() end
-
-    if hrp and humanoid and humanoid.Health > 0 then
-        hrp.CFrame = targetCFrame
-        hrp.AssemblyLinearVelocity = Vector3.zero
-        hrp.AssemblyAngularVelocity = Vector3.zero
-    end
     return true
 end
 
--- Hàm quản lý toàn bộ quá trình bay chia đoạn + nghỉ 0.5s
 local function SmoothTween(targetCFrame, speed)
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -158,72 +173,58 @@ local function SmoothTween(targetCFrame, speed)
     end
 
     tweeningThread = task.spawn(function()
-        local moveSpeed = speed or 280
-        local maxSegmentDistance = 450 -- Khoảng cách tối đa mỗi lần bay (Dưới ngưỡng Anti-cheat)
-        local trapAvoidHeight = 15     -- Chiều cao nâng lên né bẫy
+        local moveSpeed = speed or 120
+        local maxSegmentDistance = 120
 
-        local startPos = hrp.Position
-        local endPos = targetCFrame.Position
-
-        local totalDistance = (startPos - endPos).Magnitude
+        -- Tính toán độ cao mới nhân lên 1.8x
+        local originalTargetPos = targetCFrame.Position
+        local skyHeight = originalTargetPos.Y * 1.8
         
-        -- Nếu khoảng cách quá ngắn thì bay thẳng 1 mạch
-        if totalDistance <= maxSegmentDistance then
-            local startCF = CFrame.new(startPos.X, startPos.Y + trapAvoidHeight, startPos.Z)
-            local endCF = CFrame.new(endPos.X, endPos.Y + trapAvoidHeight, endPos.Z)
-            
-            SingleSegmentTween(startCF, endCF, moveSpeed)
-            if hrp and humanoid and humanoid.Health > 0 then
-                hrp.CFrame = targetCFrame
-            end
-        else
-            -- Nếu khoảng cách xa: Chia thành nhiều chặng
-            local numSegments = math.ceil(totalDistance / maxSegmentDistance)
-            
-            for i = 1, numSegments do
-                if not LocalPlayer.Character or not hrp or not humanoid or humanoid.Health <= 0 then
-                    break
-                end
+        -- Đổi các tọa độ thành độ cao SkyHeight 1.8x
+        local startSkyPos = Vector3.new(hrp.Position.X, skyHeight, hrp.Position.Z)
+        local endSkyPos = Vector3.new(originalTargetPos.X, skyHeight, originalTargetPos.Z)
 
-                local alphaStart = (i - 1) / numSegments
-                local alphaEnd = i / numSegments
+        -- Bước 1: Bay thẳng đứng lên độ cao 1.8x trước
+        SingleSegmentSkyWalk(hrp.Position, startSkyPos, moveSpeed)
 
-                local segStartPos = startPos:Lerp(endPos, alphaStart)
-                local segEndPos = startPos:Lerp(endPos, alphaEnd)
+        -- Bước 2: Đi bộ ngang trên không trung (Sky-Walk)
+        local totalDistance = (startSkyPos - endSkyPos).Magnitude
+        local numSegments = math.max(math.ceil(totalDistance / maxSegmentDistance), 1)
 
-                local segStartCF = CFrame.new(segStartPos.X, segStartPos.Y + trapAvoidHeight, segStartPos.Z)
-                local segEndCF = CFrame.new(segEndPos.X, segEndPos.Y + trapAvoidHeight, segEndPos.Z)
-
-                -- 1. Bay chặng thứ i
-                local success = SingleSegmentTween(segStartCF, segEndCF, moveSpeed)
-                if not success then break end
-
-                -- 2. Đặt chân xuống mặt đất tạm thời để Server lưuCheckpoint vị trí
-                if hrp and humanoid and humanoid.Health > 0 then
-                    hrp.CFrame = CFrame.new(segEndPos)
-                    hrp.AssemblyLinearVelocity = Vector3.zero
-                    hrp.AssemblyAngularVelocity = Vector3.zero
-                    pcall(function()
-                        humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-                    end)
-                end
-
-                -- 3. Nghỉ 0.5s trước khi bay chặng tiếp theo (Nếu chưa phải chặng cuối)
-                if i < numSegments then
-                    task.wait(0.5)
-                end
+        for i = 1, numSegments do
+            if not LocalPlayer.Character or not hrp or not humanoid or humanoid.Health <= 0 then
+                break
             end
 
-            -- Đã tới đích hoàn toàn
+            local alphaStart = (i - 1) / numSegments
+            local alphaEnd = i / numSegments
+
+            local segStartPos = startSkyPos:Lerp(endSkyPos, alphaStart)
+            local segEndPos = startSkyPos:Lerp(endSkyPos, alphaEnd)
+
+            local success = SingleSegmentSkyWalk(segStartPos, segEndPos, moveSpeed)
+            if not success then break end
+
             if hrp and humanoid and humanoid.Health > 0 then
-                hrp.CFrame = targetCFrame
+                hrp.CFrame = CFrame.new(segEndPos)
                 hrp.AssemblyLinearVelocity = Vector3.zero
                 hrp.AssemblyAngularVelocity = Vector3.zero
-                pcall(function()
-                    humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-                end)
+            end
+
+            if i < numSegments then
+                task.wait(0.2) -- Đồng bộ dữ liệu vị trí với Server
             end
         end
+
+        -- Bước 3: Hạ cánh xuống điểm đích gốc an toàn
+        if hrp and humanoid and humanoid.Health > 0 then
+            SingleSegmentSkyWalk(endSkyPos, originalTargetPos, moveSpeed)
+            hrp.CFrame = targetCFrame
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+        end
+        
+        RemoveSkyPlatform()
         tweeningThread = nil
     end)
 end
@@ -344,11 +345,11 @@ local function LoadMainTabs()
     MainTab:CreateSection("Tính Năng Farm & Safe Zone")
 
     MainTab:CreateSlider({
-        Name = "Tốc độ bay (Tween Speed)",
-        Range = {100, 600},
+        Name = "Tốc độ di chuyển (Move Speed)",
+        Range = {50, 300},
         Increment = 10,
         Suffix = "Studs/s",
-        CurrentValue = 280,
+        CurrentValue = 120,
         Flag = "TweenSpeed",
         Callback = function(Value)
             tweenSpeed = Value
@@ -356,9 +357,9 @@ local function LoadMainTabs()
     })
 
     MainTab:CreateButton({
-        Name = "Safe Zone (Bay về khu vực an toàn)",
+        Name = "Safe Zone (Dịch chuyển về khu vực an toàn)",
         Callback = function()
-            Rayfield:Notify({ Title = "Safe Zone", Content = "Đang bay về Safe Zone...", Duration = 2 })
+            Rayfield:Notify({ Title = "Safe Zone", Content = "Đang di chuyển về Safe Zone...", Duration = 2 })
             SmoothTween(safeZoneCFrame, tweenSpeed)
         end,
     })

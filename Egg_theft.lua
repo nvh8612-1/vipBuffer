@@ -1,7 +1,7 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (FIXED SKY-WALK 1.8X WORKING)
+--// RAYFIELD - SCRIPT HUB BY FTGS (CONTINUOUS SMOOTH SKY-WALK 1.8X - FIXED CFrame)
 
 if getgenv().FTGS_HUB_LOADED then
-    warn("FTGS HUB đã chạy sẵn!")
+    warn("FTGS HUB đã chạy sẵn! Hủy lượt thực thi trùng lặp.")
     return
 end
 getgenv().FTGS_HUB_LOADED = true
@@ -56,14 +56,17 @@ local antiAFKActive = false
 local antiRagdollActive = false
 local isInteractingPrompt = false
 local tweenSpeed = 120
-local safeZoneCFrame = CFrame.new(534.61, 70.27, -366.91, 0.051, 0, -0.999, 0, 1, 0, 0.999, 0, 0.051)
+
+-- TỌA ĐỘ MỚI ĐÃ CẬP NHẬT
+local safeZoneCFrame = CFrame.new(519.01, 70.27, -362.74, 0.015, -0.000, -1.000, -0.000, 1.000, -0.000)
 local safeZoneGui = nil
 
 local areaCFrames = {
-    Cosmic = CFrame.new(3392.59, 70.27, -337.56, -1.000, 0.000, 0.018, 0.000, 1.000, 0.000, -0.018, 0.000, -1.000),
-    Prehistoric = CFrame.new(2813.55, 70.27, -381.25, 1.000, 0.000, 0.024, -0.000, 1.000, -0.000, -0.024, 0.000, 1.000),
-    Ocean = CFrame.new(2280.64, 70.27, -343.30, -1.000, 0.000, -0.009, 0.000, 1.000, 0.000, 0.009, 0.000, -1.000),
-    Volcano = CFrame.new(1878.76, 70.27, -381.89, 1.000, -0.000, 0.002, 0.000, 1.000, -0.000, -0.002, 0.000, 1.000)
+    Volcano = CFrame.new(1879.73, 70.27, -384.79, 1.000, -0.000, 0.019, 0.000, 1.000, -0.000),
+    Ocean = CFrame.new(2288.07, 70.27, -345.39, -1.000, -0.000, 0.022, -0.000, 1.000, 0.000),
+    Prehistoric = CFrame.new(2809.94, 70.27, -369.17, 0.995, -0.000, -0.105, 0.000, 1.000, -0.000),
+    Cosmic = CFrame.new(3393.60, 70.27, -342.13, -1.000, -0.000, -0.010, -0.000, 1.000, 0.000),
+    ["Cherry Blossom"] = CFrame.new(4025.85, 70.27, -378.81, 0.984, -0.000, -0.178, 0.000, 1.000, -0.000)
 }
 
 local areaGuis = {}
@@ -86,63 +89,9 @@ local function SaveKeyToStorage(keyToSave)
 end
 
 --------------------------------------------------
--- HÀM LƯỚT TÊN KHÔNG TRUNG FIX CHUẨN (SKY-WALK 1.8X)
+-- HÀM LƯỚT MIÊN MẠCH TRÊN KHÔNG (NO-PAUSE SKY-WALK)
 --------------------------------------------------
 local tweeningThread = nil
-
-local function ContinuousMove(startPos, targetPos, speed)
-    local char = LocalPlayer.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-    if not hrp or not humanoid or humanoid.Health <= 0 then return false end
-
-    local distance = (startPos - targetPos).Magnitude
-    if distance <= 1 then
-        hrp.CFrame = CFrame.new(targetPos)
-        return true
-    end
-
-    local timeToReach = distance / speed
-    local startTime = os.clock()
-
-    -- Tạo Part ảo làm điểm tựa di chuyển không bị rớt
-    local bodyVelocity = Instance.new("BodyVelocity")
-    bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    bodyVelocity.Velocity = Vector3.zero
-    bodyVelocity.Parent = hrp
-
-    local bodyGyro = Instance.new("BodyGyro")
-    bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-    bodyGyro.CFrame = CFrame.lookAt(startPos, targetPos)
-    bodyGyro.Parent = hrp
-
-    while os.clock() - startTime < timeToReach do
-        if not LocalPlayer.Character or not hrp or not humanoid or humanoid.Health <= 0 then
-            if bodyVelocity then bodyVelocity:Destroy() end
-            if bodyGyro then bodyGyro:Destroy() end
-            return false
-        end
-
-        -- Tắt va chạm vật lý để lướt mượt xuyên vật cản
-        for _, part in ipairs(char:GetChildren()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
-
-        local elapsed = os.clock() - startTime
-        local alpha = math.clamp(elapsed / timeToReach, 0, 1)
-
-        local currentPos = startPos:Lerp(targetPos, alpha)
-        hrp.CFrame = CFrame.new(currentPos, Vector3.new(targetPos.X, currentPos.Y, targetPos.Z))
-
-        RunService.Stepped:Wait()
-    end
-
-    if bodyVelocity then bodyVelocity:Destroy() end
-    if bodyGyro then bodyGyro:Destroy() end
-    return true
-end
 
 local function SmoothTween(targetCFrame, speed)
     local char = LocalPlayer.Character
@@ -157,42 +106,79 @@ local function SmoothTween(targetCFrame, speed)
 
     tweeningThread = task.spawn(function()
         local moveSpeed = speed or 120
+        local startCFrame = hrp.CFrame
+        local startPos = startCFrame.Position
+        local endPos = targetCFrame.Position
 
-        -- Tính toán độ cao mới trên không trung (1.8x)
-        local originalTargetPos = targetCFrame.Position
-        local skyHeight = math.max(originalTargetPos.Y * 1.8, hrp.Position.Y + 25)
-        
-        local startSkyPos = Vector3.new(hrp.Position.X, skyHeight, hrp.Position.Z)
-        local endSkyPos = Vector3.new(originalTargetPos.X, skyHeight, originalTargetPos.Z)
+        -- Tính độ cao bay trên không (1.8x)
+        local skyHeight = math.max(endPos.Y * 1.8, startPos.Y + 30)
 
-        -- Bật trạng thái Physics để tránh rơi do trọng lực
-        local oldState = humanoid:GetState()
-        humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+        -- Tạo các điểm mốc quỹ đạo mượt (Start -> SkyStart -> SkyEnd -> End)
+        local p0 = startPos
+        local p1 = Vector3.new(startPos.X, skyHeight, startPos.Z)
+        local p2 = Vector3.new(endPos.X, skyHeight, endPos.Z)
+        local p3 = endPos
 
-        -- Bước 1: Bay vút lên không trung
-        local ok1 = ContinuousMove(hrp.Position, startSkyPos, moveSpeed)
-        if not ok1 then 
-            humanoid:ChangeState(oldState)
-            tweeningThread = nil 
-            return 
+        -- Tính tổng chiều dài quãng đường ước tính
+        local totalDistance = (p1 - p0).Magnitude + (p2 - p1).Magnitude + (p3 - p2).Magnitude
+        if totalDistance < 1 then
+            hrp.CFrame = targetCFrame
+            tweeningThread = nil
+            return
         end
 
-        -- Bước 2: Lướt thẳng trên không tới vị trí ngang mục tiêu
-        local ok2 = ContinuousMove(startSkyPos, endSkyPos, moveSpeed)
-        if not ok2 then 
-            humanoid:ChangeState(oldState)
-            tweeningThread = nil 
-            return 
+        local duration = totalDistance / moveSpeed
+        local startTime = os.clock()
+
+        -- Tắt va chạm vật lý tạm thời
+        local parts = {}
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                table.insert(parts, {part = part, canCollide = part.CanCollide})
+                part.CanCollide = false
+            end
         end
 
-        -- Bước 3: Đáp xuống mục tiêu
-        ContinuousMove(endSkyPos, originalTargetPos, moveSpeed)
+        while os.clock() - startTime < duration do
+            if not LocalPlayer.Character or not hrp or not humanoid or humanoid.Health <= 0 then
+                tweeningThread = nil
+                return
+            end
 
+            local elapsed = os.clock() - startTime
+            local t = math.clamp(elapsed / duration, 0, 1)
+
+            -- Thuật toán Bezier Cubic cho đường bay vòng cung lướt liên tục KHÔNG DỪNG
+            local currentPos = (1-t)^3 * p0 + 3*(1-t)^2*t * p1 + 3*(1-t)*t^2 * p2 + t^3 * p3
+            
+            -- Tính hướng nhìn về phía trước
+            local nextT = math.clamp(t + 0.01, 0, 1)
+            local nextPos = (1-nextT)^3 * p0 + 3*(1-nextT)^2*nextT * p1 + 3*(1-nextT)*nextT^2 * p2 + nextT^3 * p3
+            local lookDir = (nextPos - currentPos)
+
+            if lookDir.Magnitude > 0.001 then
+                hrp.CFrame = CFrame.lookAt(currentPos, currentPos + lookDir)
+            else
+                hrp.CFrame = CFrame.new(currentPos)
+            end
+
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+
+            RunService.Heartbeat:Wait()
+        end
+
+        -- Khôi phục lại trạng thái ban đầu
         if hrp and humanoid and humanoid.Health > 0 then
             hrp.CFrame = targetCFrame
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
-            humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+        end
+
+        for _, data in ipairs(parts) do
+            if data.part and data.part.Parent then
+                data.part.CanCollide = data.canCollide
+            end
         end
 
         tweeningThread = nil
@@ -217,12 +203,12 @@ local function CreateMiniAreaButton(areaName, targetCFrame, bgColor, yScale, yOf
     btn.Name = "Btn"
     btn.Parent = gui
     btn.AnchorPoint = Vector2.new(1, 0.5)
-    btn.Size = UDim2.new(0, 90, 0, 26)
+    btn.Size = UDim2.new(0, 110, 0, 26)
     btn.Position = UDim2.new(1, -15, yScale, yOffsetPixel)
     btn.BackgroundColor3 = bgColor
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Text = areaName
-    btn.TextSize = 13
+    btn.TextSize = 12
     btn.Font = Enum.Font.SourceSansBold
     btn.Active = true
     btn.Draggable = true
@@ -315,8 +301,8 @@ local function LoadMainTabs()
     MainTab:CreateSection("Tính Năng Farm & Safe Zone")
 
     MainTab:CreateSlider({
-        Name = "Tốc độ di chuyển (Move Speed)",
-        Range = {50, 300},
+        Name = "Tốc độ di chuyển (Move Speed MAX 600)",
+        Range = {50, 600},
         Increment = 10,
         Suffix = "Studs/s",
         CurrentValue = 120,
@@ -351,7 +337,7 @@ local function LoadMainTabs()
                     SafeBtn.Parent = safeZoneGui
                     SafeBtn.AnchorPoint = Vector2.new(1, 0.5)
                     SafeBtn.Size = UDim2.new(0, 52, 0, 52)
-                    SafeBtn.Position = UDim2.new(1, -112, 0.12, 0)
+                    SafeBtn.Position = UDim2.new(1, -132, 0.12, 0)
                     SafeBtn.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
                     SafeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
                     SafeBtn.Text = "SAFE"
@@ -437,6 +423,19 @@ local function LoadMainTabs()
                 CreateMiniAreaButton("Cosmic", areaCFrames.Cosmic, Color3.fromRGB(138, 43, 226), 0.12, 84)
             else
                 RemoveMiniAreaButton("Cosmic")
+            end
+        end,
+    })
+
+    AreaTab:CreateToggle({
+        Name = "Cherry Blossom Mini Toggle",
+        CurrentValue = false,
+        Flag = "CherryBlossomMini",
+        Callback = function(Value)
+            if Value then
+                CreateMiniAreaButton("Cherry Blossom", areaCFrames["Cherry Blossom"], Color3.fromRGB(235, 90, 160), 0.12, 112)
+            else
+                RemoveMiniAreaButton("Cherry Blossom")
             end
         end,
     })

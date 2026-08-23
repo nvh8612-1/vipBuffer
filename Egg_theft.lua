@@ -11,6 +11,7 @@ local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
+local TweenService = game:GetService("TweenService")
 
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
@@ -38,8 +39,8 @@ end
 --------------------------------------------------
 -- CẤU HÌNH KEY & FILE STORAGE
 --------------------------------------------------
-local currentKey = "win0"
-local oldKey = "2026-tjjsk"
+local currentKey = "key-fix-tjjskl"
+local oldKey = "win0"
 local keyUrl = "https://link4sub.com/notes/cLCN"
 local fileName = "FTGSKey_Saved.txt"
 
@@ -49,9 +50,11 @@ local isKeyUnlocked = false
 local skipPromptActive = false
 local autoZoneActive = false
 local antiAFKActive = false
-local antiRagdollActive = false
 local isInteractingPrompt = false
+
+-- Cấu hình Tween
 local tweenSpeed = 120
+local chunkSize = 38 -- Mặc định MAX 38 studs/chunk
 
 -- TỌA ĐỘ CHUẨN
 local safeZoneCFrame = CFrame.new(519.01, 70.27, -362.74)
@@ -85,7 +88,7 @@ local function SaveKeyToStorage(keyToSave)
 end
 
 --------------------------------------------------
--- HÀM LƯỚT MIÊN MẠCH TRÊN KHÔNG (NO-PAUSE SKY-WALK MAX 600)
+-- HÀM TWEEN MẶT ĐẤT PHÂN ĐOẠN (GROUND CHUNK TWEEN)
 --------------------------------------------------
 local tweeningThread = nil
 
@@ -101,27 +104,18 @@ local function SmoothTween(targetCFrame, speed)
     end
 
     tweeningThread = task.spawn(function()
-        local moveSpeed = speed or 120
+        local moveSpeed = speed or tweenSpeed
         local startPos = hrp.Position
         local endPos = targetCFrame.Position
+        local totalDistance = (endPos - startPos).Magnitude
 
-        local skyHeight = math.max(endPos.Y * 1.8, startPos.Y + 30)
-
-        local p0 = startPos
-        local p1 = Vector3.new(startPos.X, skyHeight, startPos.Z)
-        local p2 = Vector3.new(endPos.X, skyHeight, endPos.Z)
-        local p3 = endPos
-
-        local totalDistance = (p1 - p0).Magnitude + (p2 - p1).Magnitude + (p3 - p2).Magnitude
         if totalDistance < 1 then
             hrp.CFrame = targetCFrame
             tweeningThread = nil
             return
         end
 
-        local duration = totalDistance / moveSpeed
-        local startTime = os.clock()
-
+        -- Tắt va chạm tạm thời
         local parts = {}
         for _, part in ipairs(char:GetDescendants()) do
             if part:IsA("BasePart") then
@@ -130,30 +124,37 @@ local function SmoothTween(targetCFrame, speed)
             end
         end
 
-        while os.clock() - startTime < duration do
-            if not LocalPlayer.Character or not hrp or not humanoid or humanoid.Health <= 0 then
-                tweeningThread = nil
-                return
-            end
+        -- Chia chặng theo chunkSize (Tối đa 38 studs)
+        local numSteps = math.max(1, math.floor(totalDistance / chunkSize))
+        local direction = (endPos - startPos).Unit
+        local currentRotation = hrp.CFrame - hrp.CFrame.Position
 
-            local elapsed = os.clock() - startTime
-            local t = math.clamp(elapsed / duration, 0, 1)
+        for i = 1, numSteps do
+            if not LocalPlayer.Character or not hrp or humanoid.Health <= 0 then break end
 
-            local currentPos = (1-t)^3 * p0 + 3*(1-t)^2*t * p1 + 3*(1-t)*t^2 * p2 + t^3 * p3
-            local nextT = math.clamp(t + 0.01, 0, 1)
-            local nextPos = (1-nextT)^3 * p0 + 3*(1-nextT)^2*nextT * p1 + 3*(1-nextT)*nextT^2 * p2 + nextT^3 * p3
-            local lookDir = (nextPos - currentPos)
-
-            if lookDir.Magnitude > 0.001 then
-                hrp.CFrame = CFrame.lookAt(currentPos, currentPos + lookDir)
+            local nextPos
+            if i == numSteps then
+                nextPos = endPos
             else
-                hrp.CFrame = CFrame.new(currentPos)
+                nextPos = startPos + (direction * (i * chunkSize))
             end
+
+            local segmentDistance = (nextPos - hrp.Position).Magnitude
+            local segmentTime = segmentDistance / moveSpeed
+
+            local tweenInfo = TweenInfo.new(
+                math.max(0.01, segmentTime),
+                Enum.EasingStyle.Linear
+            )
+            
+            local targetStepCFrame = CFrame.new(nextPos) * currentRotation
+            local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetStepCFrame})
+            
+            tween:Play()
+            tween.Completed:Wait()
 
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
-
-            RunService.Heartbeat:Wait()
         end
 
         if hrp and humanoid and humanoid.Health > 0 then
@@ -162,6 +163,7 @@ local function SmoothTween(targetCFrame, speed)
             hrp.AssemblyAngularVelocity = Vector3.zero
         end
 
+        -- Mở lại va chạm
         for _, data in ipairs(parts) do
             if data.part and data.part.Parent then
                 data.part.CanCollide = data.canCollide
@@ -243,20 +245,6 @@ local function LoadMainTabs()
     MainTab:CreateSection("Chức năng cơ bản")
 
     MainTab:CreateToggle({
-        Name = "Super Mode (Bật Anti-Ragdoll & Tối ưu tốc độ farm)",
-        CurrentValue = false,
-        Flag = "SuperMode",
-        Callback = function(Value)
-            antiRagdollActive = Value
-            Rayfield:Notify({
-                Title = "Super Mode",
-                Content = Value and "Đã BẬT Super Mode 🚀" or "Đã TẮT Super Mode",
-                Duration = 2.5
-            })
-        end,
-    })
-
-    MainTab:CreateToggle({
         Name = "Skip Prompt (Bỏ qua thời gian giữ phím nhặt)",
         CurrentValue = false,
         Flag = "SkipPrompt",
@@ -292,10 +280,22 @@ local function LoadMainTabs()
         Range = {50, 600},
         Increment = 10,
         Suffix = "Studs/s",
-        CurrentValue = 120,
+        CurrentValue = tweenSpeed,
         Flag = "TweenSpeed",
         Callback = function(Value)
             tweenSpeed = Value
+        end,
+    })
+
+    MainTab:CreateSlider({
+        Name = "Chunk Size (Khoảng cách mỗi nấc MAX 38)",
+        Range = {2, 38},
+        Increment = 1,
+        Suffix = "Studs/chunk",
+        CurrentValue = chunkSize,
+        Flag = "ChunkSize",
+        Callback = function(Value)
+            chunkSize = Value
         end,
     })
 
@@ -513,16 +513,6 @@ local function LoadMainTabs()
                 Content = "Đã kích hoạt FPS Boost Full thành công! ⚡",
                 Duration = 3
             })
-        end,
-    })
-
-    MiscTab:CreateToggle({
-        Name = "Anti-Knockback / Anti-Ragdoll (Chống Nằm & Hất Tung)",
-        CurrentValue = false,
-        Flag = "AntiRagdoll",
-        Callback = function(Value)
-            antiRagdollActive = Value
-            Rayfield:Notify({ Title = "Anti-Ragdoll", Content = Value and "Đã BẬT" or "Đã TẮT", Duration = 2 })
         end,
     })
 
@@ -747,28 +737,6 @@ ProximityPromptService.PromptButtonHoldBegan:Connect(function(prompt, playerWhoT
 
         isInteractingPrompt = false
     end)
-end)
-
---------------------------------------------------
--- LOGIC ANTI-RAGDOLL
---------------------------------------------------
-RunService.Stepped:Connect(function()
-    if not antiRagdollActive or isInteractingPrompt then return end
-
-    local char = LocalPlayer.Character
-    if not char then return end
-
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        local state = humanoid:GetState()
-        if state == Enum.HumanoidStateType.Ragdoll or state == Enum.HumanoidStateType.FallingDown then
-            pcall(function()
-                humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-                humanoid.PlatformStand = false
-                humanoid.Sit = false
-            end)
-        end
-    end
 end)
 
 --------------------------------------------------

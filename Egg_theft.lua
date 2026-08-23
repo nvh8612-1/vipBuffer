@@ -1,4 +1,4 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (SKY-WALK 1.8X HEIGHT + ANTI-KILL RESET)
+--// RAYFIELD - SCRIPT HUB BY FTGS (CONTINUOUS SMOOTH SKY-WALK 1.8X)
 
 if getgenv().FTGS_HUB_LOADED then
     warn("FTGS HUB đã chạy sẵn! Hủy lượt thực thi trùng lặp.")
@@ -86,78 +86,67 @@ local function SaveKeyToStorage(keyToSave)
 end
 
 --------------------------------------------------
--- HÀM TẠO SÀN TRÊN KHÔNG TÀNG HÌNH (INVISIBLE GROUND PLATFORM)
---------------------------------------------------
-local skyPlatform = nil
-local function UpdateSkyPlatform(position)
-    if not skyPlatform or not skyPlatform.Parent then
-        skyPlatform = Instance.new("Part")
-        skyPlatform.Name = "FTGS_SkyWalkPlatform"
-        skyPlatform.Size = Vector3.new(15, 1, 15)
-        skyPlatform.Transparency = 1
-        skyPlatform.Anchored = true
-        skyPlatform.CanCollide = true
-        skyPlatform.Parent = Workspace
-    end
-    skyPlatform.CFrame = CFrame.new(position - Vector3.new(0, 3.2, 0))
-end
-
-local function RemoveSkyPlatform()
-    if skyPlatform then
-        skyPlatform:Destroy()
-        skyPlatform = nil
-    end
-end
-
---------------------------------------------------
--- HÀM SKY-WALK 1.8X ĐỘ CAO (BYPASS SERVER KILL RESET)
+-- HÀM LƯỚT LIÊN TỤC 1 MẠCH (NO-PAUSE SKY-WALK 1.8X)
 --------------------------------------------------
 local tweeningThread = nil
 
-local function SingleSegmentSkyWalk(startPos, targetPos, speed)
+local function ContinuousMove(startPos, targetPos, speed)
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     local humanoid = char and char:FindFirstChildOfClass("Humanoid")
     if not hrp or not humanoid or humanoid.Health <= 0 then return false end
 
     local distance = (startPos - targetPos).Magnitude
-    if distance <= 2 then
+    if distance <= 1 then
         hrp.CFrame = CFrame.new(targetPos)
         return true
     end
 
-    local bv = Instance.new("BodyVelocity")
-    bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-    bv.Velocity = Vector3.zero
-    bv.Parent = hrp
-
     local timeToReach = distance / speed
     local startTime = os.clock()
 
+    -- Sử dụng BodyPosition & BodyGyro để giữ thăng bằng chuẩn xác
+    local bp = Instance.new("BodyPosition")
+    bp.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bp.Dampening = 400
+    bp.P = 8000
+    bp.Position = startPos
+    bp.Parent = hrp
+
+    local gyro = Instance.new("BodyGyro")
+    gyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    gyro.CFrame = CFrame.lookAt(startPos, targetPos)
+    gyro.Parent = hrp
+
     while os.clock() - startTime < timeToReach do
         if not LocalPlayer.Character or not hrp or not humanoid or humanoid.Health <= 0 then
-            if bv then bv:Destroy() end
-            RemoveSkyPlatform()
+            if bp then bp:Destroy() end
+            if gyro then gyro:Destroy() end
             return false
+        end
+
+        -- Tắt va chạm vật lý để lướt mượt xuyên qua chướng ngại vật
+        for _, part in ipairs(char:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
         end
 
         local elapsed = os.clock() - startTime
         local alpha = math.clamp(elapsed / timeToReach, 0, 1)
 
         local currentPos = startPos:Lerp(targetPos, alpha)
-        hrp.CFrame = CFrame.lookAt(currentPos, targetPos)
+        bp.Position = currentPos
+        gyro.CFrame = CFrame.lookAt(currentPos, Vector3.new(targetPos.X, currentPos.Y, targetPos.Z))
 
-        -- Tạo sàn tàng hình di chuyển theo chân
-        UpdateSkyPlatform(currentPos)
-
-        -- Ép trạng thái Humanoid đang đi bộ để tránh bị tính là đang rơi/lơ lửng
+        -- Ép trạng thái di chuyển nhẹ để gửi tín hiệu đi bộ hợp lệ lên Server
         humanoid:ChangeState(Enum.HumanoidStateType.RunningNoPhysics)
-        humanoid:MoveTo(targetPos)
 
-        RunService.Heartbeat:Wait()
+        RunService.Stepped:Wait()
     end
 
-    if bv then bv:Destroy() end
+    if bp then bp:Destroy() end
+    if gyro then gyro:Destroy() end
     return true
 end
 
@@ -174,57 +163,31 @@ local function SmoothTween(targetCFrame, speed)
 
     tweeningThread = task.spawn(function()
         local moveSpeed = speed or 120
-        local maxSegmentDistance = 120
 
         -- Tính toán độ cao mới nhân lên 1.8x
         local originalTargetPos = targetCFrame.Position
-        local skyHeight = originalTargetPos.Y * 1.8
+        local skyHeight = math.max(originalTargetPos.Y * 1.8, hrp.Position.Y + 20)
         
-        -- Đổi các tọa độ thành độ cao SkyHeight 1.8x
         local startSkyPos = Vector3.new(hrp.Position.X, skyHeight, hrp.Position.Z)
         local endSkyPos = Vector3.new(originalTargetPos.X, skyHeight, originalTargetPos.Z)
 
-        -- Bước 1: Bay thẳng đứng lên độ cao 1.8x trước
-        SingleSegmentSkyWalk(hrp.Position, startSkyPos, moveSpeed)
+        -- Bước 1: Bay lên độ cao 1.8x liên tục
+        local ok1 = ContinuousMove(hrp.Position, startSkyPos, moveSpeed)
+        if not ok1 then tweeningThread = nil return end
 
-        -- Bước 2: Đi bộ ngang trên không trung (Sky-Walk)
-        local totalDistance = (startSkyPos - endSkyPos).Magnitude
-        local numSegments = math.max(math.ceil(totalDistance / maxSegmentDistance), 1)
+        -- Bước 2: Lướt liền mạch 1 đường duy nhất ngang bầu trời (KHÔNG DỪNG GIỮA CHẶNG)
+        local ok2 = ContinuousMove(startSkyPos, endSkyPos, moveSpeed)
+        if not ok2 then tweeningThread = nil return end
 
-        for i = 1, numSegments do
-            if not LocalPlayer.Character or not hrp or not humanoid or humanoid.Health <= 0 then
-                break
-            end
+        -- Bước 3: Đáp xuống vị trí đích gốc mượt mà
+        ContinuousMove(endSkyPos, originalTargetPos, moveSpeed)
 
-            local alphaStart = (i - 1) / numSegments
-            local alphaEnd = i / numSegments
-
-            local segStartPos = startSkyPos:Lerp(endSkyPos, alphaStart)
-            local segEndPos = startSkyPos:Lerp(endSkyPos, alphaEnd)
-
-            local success = SingleSegmentSkyWalk(segStartPos, segEndPos, moveSpeed)
-            if not success then break end
-
-            if hrp and humanoid and humanoid.Health > 0 then
-                hrp.CFrame = CFrame.new(segEndPos)
-                hrp.AssemblyLinearVelocity = Vector3.zero
-                hrp.AssemblyAngularVelocity = Vector3.zero
-            end
-
-            if i < numSegments then
-                task.wait(0.2) -- Đồng bộ dữ liệu vị trí với Server
-            end
-        end
-
-        -- Bước 3: Hạ cánh xuống điểm đích gốc an toàn
         if hrp and humanoid and humanoid.Health > 0 then
-            SingleSegmentSkyWalk(endSkyPos, originalTargetPos, moveSpeed)
             hrp.CFrame = targetCFrame
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
         end
-        
-        RemoveSkyPlatform()
+
         tweeningThread = nil
     end)
 end

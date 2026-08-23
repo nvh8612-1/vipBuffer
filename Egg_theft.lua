@@ -1,9 +1,5 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (CONTINUOUS SMOOTH SKY-WALK 1.8X - FIXED CFrame)
-
-if getgenv().FTGS_HUB_LOADED then
-    warn("FTGS HUB đã chạy sẵn! Hủy lượt thực thi trùng lặp.")
-    return
-end
+--// RESET CỜ KHÓA ĐỂ TRÁNH LỖI KHÔNG TẢI ĐƯỢC KHI EXECUTE LẠI
+getgenv().FTGS_HUB_LOADED = nil
 getgenv().FTGS_HUB_LOADED = true
 
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
@@ -57,16 +53,16 @@ local antiRagdollActive = false
 local isInteractingPrompt = false
 local tweenSpeed = 120
 
--- TỌA ĐỘ MỚI ĐÃ CẬP NHẬT
-local safeZoneCFrame = CFrame.new(519.01, 70.27, -362.74, 0.015, -0.000, -1.000, -0.000, 1.000, -0.000)
+-- TỌA ĐỘ CHUẨN
+local safeZoneCFrame = CFrame.new(519.01, 70.27, -362.74)
 local safeZoneGui = nil
 
 local areaCFrames = {
-    Volcano = CFrame.new(1879.73, 70.27, -384.79, 1.000, -0.000, 0.019, 0.000, 1.000, -0.000),
-    Ocean = CFrame.new(2288.07, 70.27, -345.39, -1.000, -0.000, 0.022, -0.000, 1.000, 0.000),
-    Prehistoric = CFrame.new(2809.94, 70.27, -369.17, 0.995, -0.000, -0.105, 0.000, 1.000, -0.000),
-    Cosmic = CFrame.new(3393.60, 70.27, -342.13, -1.000, -0.000, -0.010, -0.000, 1.000, 0.000),
-    ["Cherry Blossom"] = CFrame.new(4025.85, 70.27, -378.81, 0.984, -0.000, -0.178, 0.000, 1.000, -0.000)
+    Volcano = CFrame.new(1879.73, 70.27, -384.79),
+    Ocean = CFrame.new(2288.07, 70.27, -345.39),
+    Prehistoric = CFrame.new(2809.94, 70.27, -369.17),
+    Cosmic = CFrame.new(3393.60, 70.27, -342.13),
+    ["Cherry Blossom"] = CFrame.new(4025.85, 70.27, -378.81)
 }
 
 local areaGuis = {}
@@ -89,7 +85,7 @@ local function SaveKeyToStorage(keyToSave)
 end
 
 --------------------------------------------------
--- HÀM LƯỚT MIÊN MẠCH TRÊN KHÔNG (NO-PAUSE SKY-WALK)
+-- HÀM LƯỚT MIÊN MẠCH TRÊN KHÔNG (NO-PAUSE SKY-WALK MAX 600)
 --------------------------------------------------
 local tweeningThread = nil
 
@@ -106,20 +102,16 @@ local function SmoothTween(targetCFrame, speed)
 
     tweeningThread = task.spawn(function()
         local moveSpeed = speed or 120
-        local startCFrame = hrp.CFrame
-        local startPos = startCFrame.Position
+        local startPos = hrp.Position
         local endPos = targetCFrame.Position
 
-        -- Tính độ cao bay trên không (1.8x)
         local skyHeight = math.max(endPos.Y * 1.8, startPos.Y + 30)
 
-        -- Tạo các điểm mốc quỹ đạo mượt (Start -> SkyStart -> SkyEnd -> End)
         local p0 = startPos
         local p1 = Vector3.new(startPos.X, skyHeight, startPos.Z)
         local p2 = Vector3.new(endPos.X, skyHeight, endPos.Z)
         local p3 = endPos
 
-        -- Tính tổng chiều dài quãng đường ước tính
         local totalDistance = (p1 - p0).Magnitude + (p2 - p1).Magnitude + (p3 - p2).Magnitude
         if totalDistance < 1 then
             hrp.CFrame = targetCFrame
@@ -130,7 +122,6 @@ local function SmoothTween(targetCFrame, speed)
         local duration = totalDistance / moveSpeed
         local startTime = os.clock()
 
-        -- Tắt va chạm vật lý tạm thời
         local parts = {}
         for _, part in ipairs(char:GetDescendants()) do
             if part:IsA("BasePart") then
@@ -148,10 +139,7 @@ local function SmoothTween(targetCFrame, speed)
             local elapsed = os.clock() - startTime
             local t = math.clamp(elapsed / duration, 0, 1)
 
-            -- Thuật toán Bezier Cubic cho đường bay vòng cung lướt liên tục KHÔNG DỪNG
             local currentPos = (1-t)^3 * p0 + 3*(1-t)^2*t * p1 + 3*(1-t)*t^2 * p2 + t^3 * p3
-            
-            -- Tính hướng nhìn về phía trước
             local nextT = math.clamp(t + 0.01, 0, 1)
             local nextPos = (1-nextT)^3 * p0 + 3*(1-nextT)^2*nextT * p1 + 3*(1-nextT)*nextT^2 * p2 + nextT^3 * p3
             local lookDir = (nextPos - currentPos)
@@ -168,7 +156,6 @@ local function SmoothTween(targetCFrame, speed)
             RunService.Heartbeat:Wait()
         end
 
-        -- Khôi phục lại trạng thái ban đầu
         if hrp and humanoid and humanoid.Health > 0 then
             hrp.CFrame = targetCFrame
             hrp.AssemblyLinearVelocity = Vector3.zero

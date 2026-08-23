@@ -1,6 +1,6 @@
---// RAYFIELD - SCRIPT HUB BY FTGS (SINGLE INSTANCE & ANTI-SPAM HOP)
+--// RAYFIELD - SCRIPT HUB BY FTGS (ANTI-SPAM HOP & ULTRA-SMOOTH TWEEN)
 
--- 1. CHỐNG TRÙNG LẬP SCRIPT (SINGLE INSTANCE CHECK)
+-- 1. CHỐNG TRÙNG LẬP SCRIPT TỪ VÒNG GỬI XE (SINGLE INSTANCE CHECK)
 if getgenv().FTGS_HUB_LOADED then
     warn("FTGS HUB đã chạy sẵn! Hủy lượt thực thi trùng lặp.")
     return
@@ -20,7 +20,7 @@ local ProximityPromptService = game:GetService("ProximityPromptService")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
 --------------------------------------------------
--- HÀM LƯU SCRIPT ĐỂ TỰ ĐỘNG CHẠY KHI HOP SERVER (ĐÃ CHỐNG SPAM)
+-- HÀM LƯU SCRIPT ĐỂ TỰ ĐỘNG CHẠY KHI HOP SERVER (CHỐNG SPAM)
 --------------------------------------------------
 local isTeleporting = false
 local function QueueScriptForTeleport()
@@ -28,8 +28,8 @@ local function QueueScriptForTeleport()
     isTeleporting = true
 
     local teleportScript = [[
-        repeat task.wait() until game:IsLoaded()
         if not getgenv().FTGS_HUB_LOADED then
+            repeat task.wait() until game:IsLoaded()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/nvh8612-1/vipBuffer/refs/heads/main/Egg_theft.lua"))()
         end
     ]]
@@ -87,65 +87,79 @@ local function SaveKeyToStorage(keyToSave)
 end
 
 --------------------------------------------------
--- HÀM TWEEN SIÊU TỐC NÉ QUÁI & BYPASS ANTI-KILL
+-- HÀM TWEEN CHỐNG GIẬT / CHỐNG TELE NGƯỢC / NÉ QUÁI (HEARTBEAT)
 --------------------------------------------------
+local tweeningThread = nil
+
 local function SmoothTween(targetCFrame, speed)
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     local humanoid = char and char:FindFirstChildOfClass("Humanoid")
     if not hrp or not humanoid or humanoid.Health <= 0 then return end
 
-    local moveSpeed = speed or 280
-    local trapAvoidHeight = 14 
+    if tweeningThread then
+        task.cancel(tweeningThread)
+        tweeningThread = nil
+    end
 
-    task.spawn(function()
+    tweeningThread = task.spawn(function()
+        local moveSpeed = speed or 280
+        local trapAvoidHeight = 15
+
         local startPos = hrp.Position
         local endPos = targetCFrame.Position
-        
+
         local midStartPos = Vector3.new(startPos.X, startPos.Y + trapAvoidHeight, startPos.Z)
         local midEndPos = Vector3.new(endPos.X, endPos.Y + trapAvoidHeight, endPos.Z)
 
-        local distance = (midStartPos - midEndPos).Magnitude
-        if distance <= 2 then
+        local totalDistance = (midStartPos - midEndPos).Magnitude
+        if totalDistance <= 2 then
             hrp.CFrame = targetCFrame
             return
         end
 
-        pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.NoPhysics) end)
-        
-        for _, part in ipairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
+        local bv = Instance.new("BodyVelocity")
+        bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+        bv.Velocity = Vector3.zero
+        bv.Parent = hrp
 
-        local timeToReach = distance / moveSpeed
-        local steps = math.max(math.floor(timeToReach * 60), 1)
-        local delayTime = timeToReach / steps
+        local timeToReach = totalDistance / moveSpeed
+        local startTime = os.clock()
 
-        for i = 1, steps do
+        while os.clock() - startTime < timeToReach do
             if not LocalPlayer.Character or not hrp or not humanoid or humanoid.Health <= 0 then
                 break
             end
 
-            local alpha = i / steps
+            pcall(function()
+                humanoid:ChangeState(Enum.HumanoidStateType.NoPhysics)
+            end)
+            for _, part in ipairs(char:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+
+            local elapsed = os.clock() - startTime
+            local alpha = math.clamp(elapsed / timeToReach, 0, 1)
+
             local currentPos = midStartPos:Lerp(midEndPos, alpha)
-            
-            local lookAtCFrame = CFrame.lookAt(currentPos, midEndPos)
-            hrp.CFrame = lookAtCFrame
+            hrp.CFrame = CFrame.lookAt(currentPos, midEndPos)
 
-            hrp.AssemblyLinearVelocity = Vector3.zero
-            hrp.AssemblyAngularVelocity = Vector3.zero
-
-            task.wait(delayTime)
+            RunService.Heartbeat:Wait()
         end
+
+        if bv then bv:Destroy() end
 
         if hrp and humanoid and humanoid.Health > 0 then
             hrp.CFrame = targetCFrame
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
-            pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.Running) end)
+            pcall(function()
+                humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+            end)
         end
+        tweeningThread = nil
     end)
 end
 
@@ -187,9 +201,7 @@ local function CreateMiniAreaButton(areaName, targetCFrame, bgColor, yScale, yOf
     UIStroke.Parent = btn
 
     btn.MouseButton1Click:Connect(function()
-        task.spawn(function()
-            SmoothTween(targetCFrame, tweenSpeed)
-        end)
+        SmoothTween(targetCFrame, tweenSpeed)
     end)
 
     areaGuis[areaName] = gui
@@ -282,9 +294,7 @@ local function LoadMainTabs()
         Name = "Safe Zone (Bay về khu vực an toàn)",
         Callback = function()
             Rayfield:Notify({ Title = "Safe Zone", Content = "Đang bay về Safe Zone...", Duration = 2 })
-            task.spawn(function()
-                SmoothTween(safeZoneCFrame, tweenSpeed)
-            end)
+            SmoothTween(safeZoneCFrame, tweenSpeed)
         end,
     })
 
@@ -324,9 +334,7 @@ local function LoadMainTabs()
                     UIStroke.Parent = SafeBtn
 
                     SafeBtn.MouseButton1Click:Connect(function()
-                        task.spawn(function()
-                            SmoothTween(safeZoneCFrame, tweenSpeed)
-                        end)
+                        SmoothTween(safeZoneCFrame, tweenSpeed)
                     end)
                 end
                 safeZoneGui.Enabled = true
@@ -644,7 +652,7 @@ ProximityPromptService.PromptButtonHoldBegan:Connect(function(prompt, playerWhoT
 end)
 
 --------------------------------------------------
--- LOGIC ANTI-RAGDOLL (BẢN NHỆ)
+-- LOGIC ANTI-RAGDOLL
 --------------------------------------------------
 RunService.Stepped:Connect(function()
     if not antiRagdollActive or isInteractingPrompt then return end

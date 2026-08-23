@@ -38,7 +38,7 @@ end
 --------------------------------------------------
 -- CẤU HÌNH KEY & FILE STORAGE
 --------------------------------------------------
-local currentKey = "Win1"
+local currentKey = "win0"
 local oldKey = "2026-tjjsk"
 local keyUrl = "https://link4sub.com/notes/cLCN"
 local fileName = "FTGSKey_Saved.txt"
@@ -430,7 +430,91 @@ local function LoadMainTabs()
     -- TAB MISC
     local MiscTab = Window:CreateTab("Misc", 4483362458)
     
-    MiscTab:CreateSection("Tính Năng Hỗ Trợ")
+    MiscTab:CreateSection("Tính Năng Hỗ Trợ & Tối Ưu")
+
+    MiscTab:CreateButton({
+        Name = "Fix Lag / Boost FPS Full 🚀",
+        Callback = function()
+            local Lighting = game:GetService("Lighting")
+            local Terrain = Workspace.Terrain
+
+            pcall(function()
+                Lighting.GlobalShadows = false
+                Lighting.FogEnd = 9e9
+                Lighting.Brightness = 1
+                Lighting.EnvironmentDiffuseScale = 0
+                Lighting.EnvironmentSpecularScale = 0
+                if Lighting:FindFirstChild("Bloom") then Lighting.Bloom.Enabled = false end
+                if Lighting:FindFirstChild("ColorCorrection") then Lighting.ColorCorrection.Enabled = false end
+                if Lighting:FindFirstChild("SunRays") then Lighting.SunRays.Enabled = false end
+                if Lighting:FindFirstChild("DepthOfField") then Lighting.DepthOfField.Enabled = false end
+                if Lighting:FindFirstChild("Blur") then Lighting.Blur.Enabled = false end
+            end)
+
+            pcall(function()
+                Terrain.WaterWaveSize = 0
+                Terrain.WaterWaveSpeed = 0
+                Terrain.WaterReflectance = 0
+                Terrain.WaterTransparency = 1
+            end)
+
+            local function optimize(obj)
+                pcall(function()
+                    if obj:IsA("ParticleEmitter")
+                    or obj:IsA("Trail")
+                    or obj:IsA("Beam")
+                    or obj:IsA("Smoke")
+                    or obj:IsA("Fire")
+                    or obj:IsA("Sparkles") then
+                        obj.Enabled = false
+
+                    elseif obj:IsA("Explosion") then
+                        obj.BlastPressure = 0
+                        obj.BlastRadius = 0
+
+                    elseif obj:IsA("BasePart") then
+                        obj.CastShadow = false
+                        obj.Material = Enum.Material.SmoothPlastic
+                        obj.Reflectance = 0
+
+                    elseif obj:IsA("Texture") then
+                        obj.Texture = ""
+
+                    elseif obj:IsA("Decal") then
+                        obj.Texture = ""
+
+                    elseif obj:IsA("MeshPart") then
+                        obj.TextureID = ""
+
+                    elseif obj:IsA("SpecialMesh") then
+                        obj.TextureId = ""
+
+                    elseif obj:IsA("SurfaceAppearance") then
+                        obj:Destroy()
+                    end
+                end)
+            end
+
+            for _,v in ipairs(game:GetDescendants()) do
+                optimize(v)
+            end
+
+            game.DescendantAdded:Connect(function(v)
+                task.wait()
+                optimize(v)
+            end)
+
+            pcall(function()
+                settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+            end)
+
+            Rayfield:Notify({
+                Title = "Fix Lag",
+                Content = "Đã kích hoạt FPS Boost Full thành công! ⚡",
+                Duration = 3
+            })
+        end,
+    })
 
     MiscTab:CreateToggle({
         Name = "Anti-Knockback / Anti-Ragdoll (Chống Nằm & Hất Tung)",

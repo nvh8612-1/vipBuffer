@@ -1,3 +1,4 @@
+--// RESET CỜ KHÓA ĐỂ TRÁNH LỖI KHÔNG TẢI ĐƯỢC KHI EXECUTE LẠI
 getgenv().FTGS_HUB_LOADED = nil
 getgenv().FTGS_HUB_LOADED = true
 
@@ -15,14 +16,34 @@ local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
 --------------------------------------------------
--- CẤU HÌNH KEY & TẢI LOGIC
+-- HÀM LƯU SCRIPT KHI HOP SERVER
 --------------------------------------------------
-local KEY_OLD_LOGIC = "key-fix-tjjskl" -- Bản cũ: Bay thẳng
-local KEY_NEW_LOGIC = "test-1"          -- Bản mới: Teleport theo Waypoint
+local isTeleporting = false
+local function QueueScriptForTeleport()
+    if isTeleporting then return end
+    isTeleporting = true
+
+    local teleportScript = [[
+        if not getgenv().FTGS_HUB_LOADED then
+            repeat task.wait() until game:IsLoaded()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/nvh8612-1/vipBuffer/refs/heads/main/Egg_theft.lua"))()
+        end
+    ]]
+    
+    local queueFunc = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
+    if queueFunc then
+        queueFunc(teleportScript)
+    end
+end
+
+--------------------------------------------------
+-- CẤU HÌNH KEY & FILE STORAGE
+--------------------------------------------------
+local currentKey = "key-fix-tjjskl"
+local oldKey = "win0"
 local keyUrl = "https://link4sub.com/notes/cLCN"
 local fileName = "FTGSKey_Saved.txt"
 
-local activeLogicMode = nil -- "OLD" hoặc "NEW"
 local inputKeyText = ""
 local isKeyUnlocked = false
 
@@ -31,12 +52,15 @@ local autoZoneActive = false
 local antiAFKActive = false
 local isInteractingPrompt = false
 
+-- Cấu hình Tween
 local tweenSpeed = 120
-local chunkSize = 3
+local chunkSize = 3 -- Mặc định đã đổi thành 3 studs/chunk
 
--- DỮ LIỆU TỌA ĐỘ BẢN CŨ (Bay thẳng)
-local oldSafeZoneCFrame = CFrame.new(519.01, 70.27, -362.74)
-local oldAreaCFrames = {
+-- TỌA ĐỘ CHUẨN
+local safeZoneCFrame = CFrame.new(519.01, 70.27, -362.74)
+local safeZoneGui = nil
+
+local areaCFrames = {
     Volcano = CFrame.new(1879.73, 70.27, -384.79),
     Ocean = CFrame.new(2288.07, 70.27, -345.39),
     Prehistoric = CFrame.new(2809.94, 70.27, -369.17),
@@ -44,104 +68,30 @@ local oldAreaCFrames = {
     ["Cherry Blossom"] = CFrame.new(4025.85, 70.27, -378.81)
 }
 
--- DỮ LIỆU WAYPOINTS BẢN MỚI
-local waypoints = {
-    [0]  = CFrame.new(536.83, 70.27, -364.87),
-    [1]  = CFrame.new(569.26, 70.27, -361.94),
-    [2]  = CFrame.new(611.89, 70.27, -358.83),
-    [3]  = CFrame.new(649.32, 70.27, -356.99),
-    [4]  = CFrame.new(693.84, 70.27, -354.80),
-    [5]  = CFrame.new(752.83, 70.27, -356.79),
-    [6]  = CFrame.new(791.41, 70.27, -359.95),
-    [7]  = CFrame.new(833.30, 70.27, -356.90),
-    [8]  = CFrame.new(864.51, 70.27, -362.49),
-    [9]  = CFrame.new(936.46, 70.27, -353.53),
-    [10] = CFrame.new(1005.90, 70.27, -352.01),
-    [11] = CFrame.new(1032.72, 70.27, -359.86),
-    [12] = CFrame.new(1102.30, 70.27, -358.66),
-    [13] = CFrame.new(1176.73, 70.27, -358.06),
-    [14] = CFrame.new(1245.15, 70.27, -359.76),
-    [15] = CFrame.new(1290.05, 70.27, -363.28),
-    [16] = CFrame.new(1354.54, 70.27, -363.67),
-    [17] = CFrame.new(1444.64, 70.27, -363.69),
-    [18] = CFrame.new(1543.50, 70.27, -364.79),
-    [19] = CFrame.new(1601.66, 70.27, -363.93),
-    [20] = CFrame.new(1661.70, 70.27, -356.25),
-    [21] = CFrame.new(1728.34, 70.27, -353.12),
-    [22] = CFrame.new(1803.55, 70.27, -355.61),
-    [23] = CFrame.new(1907.31, 70.27, -357.09),
-    [24] = CFrame.new(1966.49, 70.27, -356.37),
-    [25] = CFrame.new(2033.94, 70.27, -359.50),
-    [26] = CFrame.new(2132.99, 70.27, -357.18),
-    [27] = CFrame.new(2217.25, 70.27, -356.72),
-    [28] = CFrame.new(2322.15, 70.27, -351.91),
-    [29] = CFrame.new(2387.37, 70.27, -361.21),
-    [30] = CFrame.new(2460.88, 70.27, -358.36),
-    [31] = CFrame.new(2525.06, 70.27, -359.24),
-    [32] = CFrame.new(2578.51, 70.27, -358.98),
-    [33] = CFrame.new(2679.42, 70.27, -367.14),
-    [34] = CFrame.new(2771.02, 70.27, -366.29),
-    [35] = CFrame.new(2868.75, 70.27, -365.80),
-    [36] = CFrame.new(2955.53, 70.27, -366.25),
-    [37] = CFrame.new(3023.96, 70.27, -364.56),
-    [38] = CFrame.new(3143.82, 70.27, -366.19),
-    [39] = CFrame.new(3240.29, 70.27, -365.25),
-    [40] = CFrame.new(3331.90, 70.27, -364.96),
-    [41] = CFrame.new(3472.10, 70.27, -352.43),
-    [42] = CFrame.new(3530.58, 70.27, -359.51),
-    [43] = CFrame.new(3594.67, 70.27, -363.98),
-    [44] = CFrame.new(3657.86, 70.27, -362.45),
-    [45] = CFrame.new(3741.10, 70.27, -358.54),
-    [46] = CFrame.new(3834.00, 70.27, -359.13),
-    [47] = CFrame.new(3964.82, 70.27, -358.81),
-    [48] = CFrame.new(4085.16, 70.27, -362.97)
-}
-
-local newAreaCFrames = {
-    Volcano = waypoints[23],
-    Ocean = waypoints[27],
-    Prehistoric = waypoints[35],
-    Cosmic = waypoints[40],
-    ["Cherry Blossom"] = waypoints[48]
-}
-
 local areaGuis = {}
-local safeZoneGui = nil
 local hiddenAssetsFolder = nil
 
 --------------------------------------------------
--- HÀM LƯU / ĐỌC FILE KEY
+-- HÀM XỬ LÝ FILE KEY
 --------------------------------------------------
 local function GetSavedKey()
-    if isfile and isfile(fileName) then return readfile(fileName) end
+    if isfile and isfile(fileName) then
+        return readfile(fileName)
+    end
     return nil
 end
 
 local function SaveKeyToStorage(keyToSave)
-    if writefile then writefile(fileName, keyToSave) end
+    if writefile then
+        writefile(fileName, keyToSave)
+    end
 end
 
 --------------------------------------------------
--- HÀM HOP SERVER
---------------------------------------------------
-local isTeleporting = false
-local function QueueScriptForTeleport()
-    if isTeleporting then return end
-    isTeleporting = true
-    local teleportScript = [[
-        if not getgenv().FTGS_HUB_LOADED then
-            repeat task.wait() until game:IsLoaded()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/nvh8612-1/vipBuffer/refs/heads/main/Egg_theft.lua"))()
-        end
-    ]]
-    local queueFunc = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
-    if queueFunc then queueFunc(teleportScript) end
-end
-
---------------------------------------------------
--- HÀM TWEEN MẶT ĐẤT PHÂN ĐOẠN
+-- HÀM TWEEN MẶT ĐẤT PHÂN ĐOẠN (GROUND CHUNK TWEEN)
 --------------------------------------------------
 local tweeningThread = nil
+
 local function SmoothTween(targetCFrame, speed)
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -165,6 +115,7 @@ local function SmoothTween(targetCFrame, speed)
             return
         end
 
+        -- Tắt va chạm tạm thời
         local parts = {}
         for _, part in ipairs(char:GetDescendants()) do
             if part:IsA("BasePart") then
@@ -173,6 +124,7 @@ local function SmoothTween(targetCFrame, speed)
             end
         end
 
+        -- Chia chặng theo chunkSize
         local numSteps = math.max(1, math.floor(totalDistance / chunkSize))
         local direction = (endPos - startPos).Unit
         local currentRotation = hrp.CFrame - hrp.CFrame.Position
@@ -180,11 +132,24 @@ local function SmoothTween(targetCFrame, speed)
         for i = 1, numSteps do
             if not LocalPlayer.Character or not hrp or humanoid.Health <= 0 then break end
 
-            local nextPos = (i == numSteps) and endPos or (startPos + (direction * (i * chunkSize)))
+            local nextPos
+            if i == numSteps then
+                nextPos = endPos
+            else
+                nextPos = startPos + (direction * (i * chunkSize))
+            end
+
             local segmentDistance = (nextPos - hrp.Position).Magnitude
             local segmentTime = segmentDistance / moveSpeed
 
-            local tween = TweenService:Create(hrp, TweenInfo.new(math.max(0.01, segmentTime), Enum.EasingStyle.Linear), {CFrame = CFrame.new(nextPos) * currentRotation})
+            local tweenInfo = TweenInfo.new(
+                math.max(0.01, segmentTime),
+                Enum.EasingStyle.Linear
+            )
+            
+            local targetStepCFrame = CFrame.new(nextPos) * currentRotation
+            local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetStepCFrame})
+            
             tween:Play()
             tween.Completed:Wait()
 
@@ -198,46 +163,15 @@ local function SmoothTween(targetCFrame, speed)
             hrp.AssemblyAngularVelocity = Vector3.zero
         end
 
+        -- Mở lại va chạm
         for _, data in ipairs(parts) do
-            if data.part and data.part.Parent then data.part.CanCollide = data.canCollide end
+            if data.part and data.part.Parent then
+                data.part.CanCollide = data.canCollide
+            end
         end
 
         tweeningThread = nil
     end)
-end
-
---------------------------------------------------
--- HÀM DỊCH CHUYỂN VỀ SAFE ZONE DỰA TRÊN KEY
---------------------------------------------------
-local function SmartReturnToSafeZone()
-    if activeLogicMode == "NEW" then
-        -- LOGIC MỚI: QUÉT VỊ TRÍ GẦN NHẤT & CHẠY LÙI VỀ WAYPOINT [0]
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-
-        local currentPos = hrp.Position
-        local nearestIndex = 0
-        local minDistance = math.huge
-
-        for index, cf in pairs(waypoints) do
-            local dist = (currentPos - cf.Position).Magnitude
-            if dist < minDistance then
-                minDistance = dist
-                nearestIndex = index
-            end
-        end
-
-        task.spawn(function()
-            for i = nearestIndex, 0, -1 do
-                SmoothTween(waypoints[i], tweenSpeed)
-                repeat task.wait() until tweeningThread == nil
-            end
-        end)
-    else
-        -- LOGIC CỦI: BAY THẲNG VỀ SAFE ZONE CỦ
-        SmoothTween(oldSafeZoneCFrame, tweenSpeed)
-    end
 end
 
 --------------------------------------------------
@@ -292,7 +226,7 @@ local function RemoveMiniAreaButton(areaName)
 end
 
 --------------------------------------------------
--- RAYFIELD WINDOW
+-- WINDOW RAYFIELD
 --------------------------------------------------
 local Window = Rayfield:CreateWindow({
     Name = "FTGS HUB",
@@ -303,13 +237,12 @@ local Window = Rayfield:CreateWindow({
 })
 
 --------------------------------------------------
--- TẢI CÁC TAB CHÍNH
+-- HÀM TẠO CÁC TAB TÍNH NĂNG
 --------------------------------------------------
 local function LoadMainTabs()
     local MainTab = Window:CreateTab("Main", 4483362458)
 
-    local modeInfo = (activeLogicMode == "NEW") and "Logic Mới (Waypoints Nối Đuôi)" or "Logic Cũ (Bay Thẳng Tọa Độ)"
-    MainTab:CreateSection("Đang Chạy: " .. modeInfo)
+    MainTab:CreateSection("Chức năng cơ bản")
 
     MainTab:CreateToggle({
         Name = "Skip Prompt (Bỏ qua thời gian giữ phím nhặt)",
@@ -349,24 +282,28 @@ local function LoadMainTabs()
         Suffix = "Studs/s",
         CurrentValue = tweenSpeed,
         Flag = "TweenSpeed",
-        Callback = function(Value) tweenSpeed = Value end,
+        Callback = function(Value)
+            tweenSpeed = Value
+        end,
     })
 
     MainTab:CreateSlider({
-        Name = "Chunk Size (Khoảng Cách Chunk Roblox)",
+        Name = "Chunk Size (Khoản Cách Chunk Roblox)",
         Range = {2, 38},
         Increment = 1,
         Suffix = "Studs/chunk",
         CurrentValue = chunkSize,
         Flag = "ChunkSize",
-        Callback = function(Value) chunkSize = Value end,
+        Callback = function(Value)
+            chunkSize = Value
+        end,
     })
 
     MainTab:CreateButton({
         Name = "Safe Zone (Dịch chuyển về khu vực an toàn)",
         Callback = function()
             Rayfield:Notify({ Title = "Safe Zone", Content = "Đang di chuyển về Safe Zone...", Duration = 2 })
-            SmartReturnToSafeZone()
+            SmoothTween(safeZoneCFrame, tweenSpeed)
         end,
     })
 
@@ -406,7 +343,7 @@ local function LoadMainTabs()
                     UIStroke.Parent = SafeBtn
 
                     SafeBtn.MouseButton1Click:Connect(function()
-                        SmartReturnToSafeZone()
+                        SmoothTween(safeZoneCFrame, tweenSpeed)
                     end)
                 end
                 safeZoneGui.Enabled = true
@@ -425,15 +362,16 @@ local function LoadMainTabs()
     local AreaTab = Window:CreateTab("Area", 4483362458)
     AreaTab:CreateSection("Nút Bay Nhanh Khu Vực (Mini Toggle)")
 
-    local targetAreaMap = (activeLogicMode == "NEW") and newAreaCFrames or oldAreaCFrames
-
     AreaTab:CreateToggle({
         Name = "Volcano Mini Toggle",
         CurrentValue = false,
         Flag = "VolcanoMini",
         Callback = function(Value)
-            if Value then CreateMiniAreaButton("Volcano", targetAreaMap.Volcano, Color3.fromRGB(225, 68, 0), 0.12, 0)
-            else RemoveMiniAreaButton("Volcano") end
+            if Value then
+                CreateMiniAreaButton("Volcano", areaCFrames.Volcano, Color3.fromRGB(225, 68, 0), 0.12, 0)
+            else
+                RemoveMiniAreaButton("Volcano")
+            end
         end,
     })
 
@@ -442,8 +380,11 @@ local function LoadMainTabs()
         CurrentValue = false,
         Flag = "OceanMini",
         Callback = function(Value)
-            if Value then CreateMiniAreaButton("Ocean", targetAreaMap.Ocean, Color3.fromRGB(0, 119, 182), 0.12, 28)
-            else RemoveMiniAreaButton("Ocean") end
+            if Value then
+                CreateMiniAreaButton("Ocean", areaCFrames.Ocean, Color3.fromRGB(0, 119, 182), 0.12, 28)
+            else
+                RemoveMiniAreaButton("Ocean")
+            end
         end,
     })
 
@@ -452,8 +393,11 @@ local function LoadMainTabs()
         CurrentValue = false,
         Flag = "PrehistoricMini",
         Callback = function(Value)
-            if Value then CreateMiniAreaButton("Prehistoric", targetAreaMap.Prehistoric, Color3.fromRGB(34, 139, 34), 0.12, 56)
-            else RemoveMiniAreaButton("Prehistoric") end
+            if Value then
+                CreateMiniAreaButton("Prehistoric", areaCFrames.Prehistoric, Color3.fromRGB(34, 139, 34), 0.12, 56)
+            else
+                RemoveMiniAreaButton("Prehistoric")
+            end
         end,
     })
 
@@ -462,8 +406,11 @@ local function LoadMainTabs()
         CurrentValue = false,
         Flag = "CosmicMini",
         Callback = function(Value)
-            if Value then CreateMiniAreaButton("Cosmic", targetAreaMap.Cosmic, Color3.fromRGB(138, 43, 226), 0.12, 84)
-            else RemoveMiniAreaButton("Cosmic") end
+            if Value then
+                CreateMiniAreaButton("Cosmic", areaCFrames.Cosmic, Color3.fromRGB(138, 43, 226), 0.12, 84)
+            else
+                RemoveMiniAreaButton("Cosmic")
+            end
         end,
     })
 
@@ -472,13 +419,17 @@ local function LoadMainTabs()
         CurrentValue = false,
         Flag = "CherryBlossomMini",
         Callback = function(Value)
-            if Value then CreateMiniAreaButton("Cherry Blossom", targetAreaMap["Cherry Blossom"], Color3.fromRGB(235, 90, 160), 0.12, 112)
-            else RemoveMiniAreaButton("Cherry Blossom") end
+            if Value then
+                CreateMiniAreaButton("Cherry Blossom", areaCFrames["Cherry Blossom"], Color3.fromRGB(235, 90, 160), 0.12, 112)
+            else
+                RemoveMiniAreaButton("Cherry Blossom")
+            end
         end,
     })
 
     -- TAB MISC
     local MiscTab = Window:CreateTab("Misc", 4483362458)
+    
     MiscTab:CreateSection("Tính Năng Hỗ Trợ & Tối Ưu")
 
     MiscTab:CreateButton({
@@ -507,20 +458,61 @@ local function LoadMainTabs()
                 Terrain.WaterTransparency = 1
             end)
 
-            for _,v in ipairs(game:GetDescendants()) do
+            local function optimize(obj)
                 pcall(function()
-                    if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
-                        v.Enabled = false
-                    elseif v:IsA("BasePart") then
-                        v.CastShadow = false
-                        v.Material = Enum.Material.SmoothPlastic
-                    elseif v:IsA("Texture") or v:IsA("Decal") then
-                        v.Texture = ""
+                    if obj:IsA("ParticleEmitter")
+                    or obj:IsA("Trail")
+                    or obj:IsA("Beam")
+                    or obj:IsA("Smoke")
+                    or obj:IsA("Fire")
+                    or obj:IsA("Sparkles") then
+                        obj.Enabled = false
+
+                    elseif obj:IsA("Explosion") then
+                        obj.BlastPressure = 0
+                        obj.BlastRadius = 0
+
+                    elseif obj:IsA("BasePart") then
+                        obj.CastShadow = false
+                        obj.Material = Enum.Material.SmoothPlastic
+                        obj.Reflectance = 0
+
+                    elseif obj:IsA("Texture") then
+                        obj.Texture = ""
+
+                    elseif obj:IsA("Decal") then
+                        obj.Texture = ""
+
+                    elseif obj:IsA("MeshPart") then
+                        obj.TextureID = ""
+
+                    elseif obj:IsA("SpecialMesh") then
+                        obj.TextureId = ""
+
+                    elseif obj:IsA("SurfaceAppearance") then
+                        obj:Destroy()
                     end
                 end)
             end
 
-            Rayfield:Notify({ Title = "Fix Lag", Content = "Đã kích hoạt FPS Boost Full thành công! ⚡", Duration = 3 })
+            for _,v in ipairs(game:GetDescendants()) do
+                optimize(v)
+            end
+
+            game.DescendantAdded:Connect(function(v)
+                task.wait()
+                optimize(v)
+            end)
+
+            pcall(function()
+                settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+            end)
+
+            Rayfield:Notify({
+                Title = "Fix Lag",
+                Content = "Đã kích hoạt FPS Boost Full thành công! ⚡",
+                Duration = 3
+            })
         end,
     })
 
@@ -536,3 +528,261 @@ local function LoadMainTabs()
 
     MiscTab:CreateToggle({
         Name = "Ẩn Toàn bộ Pet",
+        CurrentValue = false,
+        Flag = "HideAllPets",
+        Callback = function(Value)
+            if Value then
+                local assets = Workspace:FindFirstChild("ClientRenderedAssets")
+                if assets then
+                    hiddenAssetsFolder = assets
+                    hiddenAssetsFolder.Parent = nil
+                    Rayfield:Notify({ Title = "Misc", Content = "Đã ẨN Toàn bộ Pet", Duration = 2 })
+                else
+                    Rayfield:Notify({ Title = "Lỗi", Content = "Không tìm thấy ClientRenderedAssets!", Duration = 2.5 })
+                end
+            else
+                if hiddenAssetsFolder then
+                    hiddenAssetsFolder.Parent = Workspace
+                    hiddenAssetsFolder = nil
+                    Rayfield:Notify({ Title = "Misc", Content = "Đã HIỆN LẠI Toàn bộ Pet", Duration = 2 })
+                end
+            end
+        end,
+    })
+
+    MiscTab:CreateSection("Chuyển Server")
+
+    MiscTab:CreateButton({
+        Name = "Server Hop (Dịch chuyển đến Server khác)",
+        Callback = function()
+            Rayfield:Notify({ Title = "Server Hop", Content = "Đang tìm Server ngẫu nhiên...", Duration = 3 })
+            QueueScriptForTeleport()
+            pcall(function()
+                local placeId = game.PlaceId
+                local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. placeId .. "/servers/0?sortOrder=Asc&limit=100")).data
+                local validServers = {}
+                
+                for _, s in ipairs(servers) do
+                    if s.id ~= game.JobId and s.playing < s.maxPlayers then
+                        table.insert(validServers, s.id)
+                    end
+                end
+
+                if #validServers > 0 then
+                    TeleportService:TeleportToPlaceInstance(placeId, validServers[math.random(1, #validServers)], LocalPlayer)
+                else
+                    Rayfield:Notify({ Title = "Server Hop", Content = "Không tìm thấy Server khả thi!", Duration = 3 })
+                end
+            end)
+        end,
+    })
+
+    MiscTab:CreateButton({
+        Name = "Server Small (Dịch chuyển đến Server ít người)",
+        Callback = function()
+            Rayfield:Notify({ Title = "Server Small", Content = "Đang tìm Server ít người nhất...", Duration = 3 })
+            QueueScriptForTeleport()
+            pcall(function()
+                local placeId = game.PlaceId
+                local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. placeId .. "/servers/0?sortOrder=Asc&limit=100")).data
+                local targetServer = nil
+
+                table.sort(servers, function(a, b) return a.playing < b.playing end)
+
+                for _, s in ipairs(servers) do
+                    if s.id ~= game.JobId and s.playing > 0 and s.playing < s.maxPlayers then
+                        targetServer = s.id
+                        break
+                    end
+                end
+
+                if targetServer then
+                    TeleportService:TeleportToPlaceInstance(placeId, targetServer, LocalPlayer)
+                else
+                    Rayfield:Notify({ Title = "Server Small", Content = "Không tìm thấy Server ít người!", Duration = 3 })
+                end
+            end)
+        end,
+    })
+end
+
+--------------------------------------------------
+-- HÀM TẠO TAB KEY
+--------------------------------------------------
+local function LoadKeyTab()
+    local KeyTab = Window:CreateTab("Key", 4483362458)
+    KeyTab:CreateSection("Hệ Thống Xác Thực Key")
+
+    KeyTab:CreateInput({
+        Name = "Nhập Key tại đây",
+        PlaceholderText = "Dán mã Key của bạn vào đây...",
+        RemoveTextAfterFocusLost = false,
+        Callback = function(Text) inputKeyText = Text end,
+    })
+
+    local CheckKeyButton
+    CheckKeyButton = KeyTab:CreateButton({
+        Name = "Check Key ...",
+        Callback = function()
+            if isKeyUnlocked then
+                Rayfield:Notify({ Title = "System", Content = "Key Hợp Lệ 🎉", Duration = 2 })
+                return
+            end
+
+            Rayfield:Notify({ Title = "System", Content = "Track key ...", Duration = 1.5 })
+            task.wait(1.5)
+
+            if inputKeyText == currentKey then
+                isKeyUnlocked = true
+                SaveKeyToStorage(currentKey)
+                
+                Rayfield:Notify({ Title = "System", Content = "Key Hợp Lệ 🎉", Duration = 3 })
+                CheckKeyButton:Set("Đã Xác Thực (Đã Lưu Key)")
+                LoadMainTabs()
+            else
+                Rayfield:Notify({ Title = "System", Content = "Key Không Hợp Lệ 💫", Duration = 3 })
+            end
+        end,
+    })
+
+    KeyTab:CreateButton({
+        Name = "Get Key (Copy Link)",
+        Callback = function()
+            if setclipboard then
+                setclipboard(keyUrl)
+                Rayfield:Notify({ Title = "Get Key", Content = "Đã sao chép Link lấy Key!", Duration = 3 })
+            end
+        end,
+    })
+end
+
+--------------------------------------------------
+-- LOGIC TRACK KEY
+--------------------------------------------------
+task.spawn(function()
+    local savedKey = GetSavedKey()
+
+    if savedKey then
+        Rayfield:Notify({ Title = "System", Content = "Track key ...", Duration = 1.5 })
+        task.wait(1.5)
+
+        if savedKey == currentKey then
+            isKeyUnlocked = true
+            Rayfield:Notify({ Title = "System", Content = "Key Hợp Lệ 🎉", Duration = 3.0 })
+            LoadMainTabs()
+        else
+            Rayfield:Notify({ Title = "System", Content = "Key Không Hợp Lệ 💫", Duration = 3.0 })
+            LoadKeyTab()
+        end
+    else
+        LoadKeyTab()
+    end
+end)
+
+--------------------------------------------------
+-- LOGIC PROXIMITY PROMPT
+--------------------------------------------------
+local function TriggerPrompt(prompt)
+    if fireproximityprompt then
+        fireproximityprompt(prompt)
+    elseif prompt.InputHoldBegin then
+        prompt:InputHoldBegin()
+        task.wait(prompt.HoldDuration)
+        prompt:InputHoldEnd()
+    end
+end
+
+Workspace.DescendantAdded:Connect(function(descendant)
+    if skipPromptActive and descendant:IsA("ProximityPrompt") then
+        pcall(function() descendant.HoldDuration = 0 end)
+    end
+end)
+
+ProximityPromptService.PromptButtonHoldBegan:Connect(function(prompt, playerWhoTriggered)
+    if playerWhoTriggered ~= LocalPlayer or isInteractingPrompt then return end
+    
+    local promptParent = prompt.Parent
+    if not promptParent then return end
+
+    local targetCFrame = nil
+    if promptParent:IsA("BasePart") then
+        targetCFrame = promptParent.CFrame
+    elseif promptParent:IsA("Model") and promptParent.PrimaryPart then
+        targetCFrame = promptParent.PrimaryPart.CFrame
+    else
+        local part = promptParent:FindFirstChildWhichIsA("BasePart")
+        if part then targetCFrame = part.CFrame end
+    end
+
+    if not targetCFrame then return end
+
+    isInteractingPrompt = true
+
+    task.spawn(function()
+        SmoothTween(targetCFrame * CFrame.new(0, 1.5, 0), tweenSpeed)
+        task.wait(0.05)
+
+        while prompt and prompt.Parent and prompt.Enabled and isInteractingPrompt do
+            local char = LocalPlayer.Character
+            local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+            if not humanoid or humanoid.Health <= 0 then break end
+
+            TriggerPrompt(prompt)
+            task.wait(0.03)
+        end
+
+        if autoZoneActive then
+            SmoothTween(safeZoneCFrame, tweenSpeed)
+        end
+
+        isInteractingPrompt = false
+    end)
+end)
+
+--------------------------------------------------
+-- LOGIC ANTI-AFK
+--------------------------------------------------
+task.spawn(function()
+    local PlayerScripts = LocalPlayer:WaitForChild("PlayerScripts")
+    local MasterControl = nil
+    
+    pcall(function()
+        local ControlModule = require(PlayerScripts:WaitForChild("PlayerModule")):GetControls()
+        MasterControl = ControlModule
+    end)
+
+    while true do
+        task.wait(15)
+        if antiAFKActive then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+                if humanoid and hrp and humanoid.Health > 0 then
+                    local duration = 0.6
+                    local startTime = os.clock()
+
+                    while os.clock() - startTime < duration do
+                        if MasterControl and MasterControl.moveFunction then
+                            MasterControl.moveFunction(LocalPlayer, Vector3.new(0, 0, -1), true)
+                        end
+
+                        humanoid.MoveVector = Vector3.new(0, 0, -1)
+                        pcall(function() humanoid.InputMoveVector = Vector3.new(0, 0, -1) end)
+                        humanoid:Move(Vector3.new(0, 0, -1), true)
+
+                        RunService.RenderStepped:Wait()
+                    end
+
+                    if MasterControl and MasterControl.moveFunction then
+                        MasterControl.moveFunction(LocalPlayer, Vector3.new(0, 0, 0), false)
+                    end
+                    humanoid.MoveVector = Vector3.new(0, 0, 0)
+                    pcall(function() humanoid.InputMoveVector = Vector3.new(0, 0, 0) end)
+                    humanoid:Move(Vector3.new(0, 0, 0), false)
+                end
+            end)
+        end
+    end
+end)
